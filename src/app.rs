@@ -1,0 +1,73 @@
+use std::sync::Arc;
+use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
+use crate::render_state::{self, RenderState};
+
+/// Stores top-level info on the entire app
+pub struct App {
+    render_state: Option<RenderState>,
+}
+
+impl App {
+    pub fn new() -> Self {
+        Self { render_state: None }
+    }
+}
+
+impl ApplicationHandler<()> for App {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let win_atts = Window::default_attributes()
+            .with_title("AZP MC");
+
+        let win = Arc::new(event_loop.create_window(win_atts).unwrap());
+
+        self.render_state = Some(
+            pollster::block_on(RenderState::new(win)).unwrap()
+        );
+    }
+
+    fn window_event(&mut self,
+        event_loop: &ActiveEventLoop,
+        win_id: WindowId,
+        event: WindowEvent,
+    ) {
+        let render_state = match &mut self.render_state {
+            Some(x) => x,
+            None => return,
+        };
+
+        match event {
+            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::Resized(size) =>
+                render_state.resize(size.width, size.height),
+            WindowEvent::RedrawRequested => {
+                match render_state.render() {
+                    Ok(_) => {}
+                    // Reconfigure the surface if it's lost or outdated
+                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                        let size = render_state.window.inner_size();
+                        render_state.resize(size.width, size.height);
+                    }
+                    Err(e) => {
+                        log::error!("Unable to render {}", e);
+                    }
+                }
+            },
+
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        physical_key: PhysicalKey::Code(code),
+                        state: key_state,
+                        ..
+                    },
+                    ..
+            } => {
+                if code == KeyCode::Escape && key_state.is_pressed() {
+                    event_loop.exit();
+                }
+            },
+
+            _ => {},
+        }
+    }
+}

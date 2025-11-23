@@ -4,19 +4,24 @@ const X: usize = CHUNK_SIZE;
 const Y: usize = CHUNK_SIZE;
 const Z: usize = 256;
 
+/// An individual chunk containing block data and its own 3D mesh.
 pub struct Chunk {
     blocks: [[[BlockType; Z]; Y]; X],
+
+    pos_x: Coordinate,
+    pos_y: Coordinate,
+
     pub mesh: Mesh,
 }
 
 impl Chunk {
-    pub fn new() -> Self {
+    pub fn new(x: Coordinate, y: Coordinate) -> Self {
         let mut blocks = [[[BlockType::Air; Z]; Y]; X];
 
         for (x, row) in blocks.iter_mut().enumerate() {
-            for (y, col) in row.iter_mut().enumerate() {
+            for (_, col) in row.iter_mut().enumerate() {
                 for z in 0..Z {
-                    let elevation = x + y + 52;
+                    let elevation = x + 52;
 
                     if z < elevation {
                         col[z] = BlockType::Dirt
@@ -31,10 +36,9 @@ impl Chunk {
 
         let mut out = Self {
             blocks,
-            mesh: Mesh {
-                verticies: vec![],
-                indicies: vec![],
-            },
+            pos_x: x,
+            pos_y: y,
+            mesh: Mesh::new(),
         };
         out.generate_mesh();
 
@@ -61,8 +65,8 @@ impl Chunk {
             return;
         }
 
-        let x_f = x as f32;
-        let y_f = y as f32;
+        let x_f = (x + (self.pos_x as usize * CHUNK_SIZE)) as f32;
+        let y_f = (y + (self.pos_y as usize * CHUNK_SIZE)) as f32;
         let z_f = z as f32;
         let t_opt = self.blocks[x][y][z].texture(side);
 

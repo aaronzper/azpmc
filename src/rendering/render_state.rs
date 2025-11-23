@@ -4,7 +4,7 @@ use log::{info};
 use wgpu::{Device, Queue, RenderPassDescriptor, RenderPipeline, Surface, SurfaceConfiguration, util::DeviceExt};
 use winit::window::Window;
 
-use crate::{rendering::{camera::{Camera, CameraUniform}, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bing_group}, vertex::Vertex}, world::chunk::Chunk};
+use crate::{rendering::{camera::{Camera, CameraUniform}, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bing_group}, vertex::Vertex}};
 
 /// Stores state of the window and rendering
 pub struct RenderState {
@@ -30,10 +30,6 @@ pub struct RenderState {
     camera_buffer: wgpu::Buffer,
 
     depth_texture: DepthTexture,
-
-    chunk: Chunk,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
 }
 
 impl RenderState {
@@ -195,24 +191,6 @@ impl RenderState {
             cache: None, // 6.
         });
 
-        let chunk = Chunk::new();
-
-        let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Text Vertex Buffer"),
-                contents: bytemuck::cast_slice(chunk.mesh.verticies.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX,
-            }
-        );
-
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(chunk.mesh.indicies.as_slice()),
-                usage: wgpu::BufferUsages::INDEX,
-            }
-        );
-
         Ok(Self {
             window,
 
@@ -231,10 +209,6 @@ impl RenderState {
             camera,
             camera_uniform,
             camera_buffer,
-
-            chunk,
-            vertex_buffer,
-            index_buffer,
         })
     }
 
@@ -254,7 +228,7 @@ impl RenderState {
         }
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, meshes: &mut [&mut Mesh]) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
 
         if !self.surface_configured {
@@ -305,9 +279,12 @@ impl RenderState {
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        render_pass.draw_indexed(0..self.chunk.mesh.indicies.len() as u32, 0, 0..1);
+        for mesh in meshes {
+            if !mesh.are_buffers_set() {
+                mesh.set_buffers(&self.device);
+            }
+            mesh.draw(&mut render_pass);
+        }
 
         drop(render_pass); // Release borrow on the encoder
 

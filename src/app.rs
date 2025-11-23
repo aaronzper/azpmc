@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::{rendering::RenderState, world::chunk::Chunk};
+use crate::{rendering::RenderState, world::GameWorld};
 
 /// Stores top-level info on the entire app
 pub struct App {
     render_state: Option<RenderState>,
     mouse_trapped: bool,
+
+    world: GameWorld,
 }
 
 impl App {
@@ -13,6 +15,7 @@ impl App {
         Self { 
             render_state: None,
             mouse_trapped: false,
+            world: GameWorld::new(),
         }
     }
 }
@@ -31,8 +34,8 @@ impl ApplicationHandler<()> for App {
 
     fn device_event(
             &mut self,
-            event_loop: &ActiveEventLoop,
-            device_id: winit::event::DeviceId,
+            _event_loop: &ActiveEventLoop,
+            _device_id: winit::event::DeviceId,
             event: winit::event::DeviceEvent,
         ) {
         let render_state = match &mut self.render_state {
@@ -54,7 +57,7 @@ impl ApplicationHandler<()> for App {
 
     fn window_event(&mut self,
         event_loop: &ActiveEventLoop,
-        win_id: WindowId,
+        _win_id: WindowId,
         event: WindowEvent,
     ) {
         let render_state = match &mut self.render_state {
@@ -69,7 +72,8 @@ impl ApplicationHandler<()> for App {
             WindowEvent::RedrawRequested => {
                 render_state.update();
 
-                match render_state.render() {
+                let mut meshes = self.world.get_meshes_mut();
+                match render_state.render(&mut meshes[..]) {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {

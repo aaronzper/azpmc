@@ -6,7 +6,7 @@ pub const SKY_COLOR: wgpu::Color = wgpu::Color {
     a: 1.0,
 };
 
-pub const CAMERA_SPEED: f32 = 0.10;
+pub const CAMERA_SPEED: f32 = 0.50;
 pub const MOUSE_SENSITIVITY: f32 = 0.007;
 pub const FOV: f32 = 70.0;
 pub const CHUNK_SIZE: usize = 16;

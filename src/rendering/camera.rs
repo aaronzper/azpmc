@@ -36,17 +36,14 @@ pub struct Camera {
 impl Camera {
     pub fn new(width: f32, height: f32) -> Self {
         Self {
-            // position the camera 0.8 units back
-            // +z is out of the screen
-            eye: (0.0, 64.0, 0.0).into(),
-            // have it look at the origin
-            target: (0.0, 64.0, -0.25).into(),
+            eye: (0.0, 70.0, 0.0).into(),
+            target: (5.0, 70.0, 5.00).into(),
             // which way is "up"
             up: cgmath::Vector3::unit_y(),
             aspect: width / height,
             fovy: FOV,
             znear: 0.1,
-            zfar: 100.0,
+            zfar: 200.0,
             controller: Controller { 
                 is_forward_pressed: false,
                 is_backward_pressed: false,

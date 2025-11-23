@@ -57,7 +57,9 @@ impl Chunk {
             if !facing.is_renderable_adjacent() || self.blocks[x][y][z] == facing {
                 return;
             }
-        };
+        } else if let BlockSide::Bottom = side {
+            return;
+        }
 
         let x_f = x as f32;
         let y_f = y as f32;

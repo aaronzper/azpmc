@@ -16,6 +16,8 @@ pub struct Controller {
     pub is_backward_pressed: bool,
     pub is_left_pressed: bool,
     pub is_right_pressed: bool,
+    pub is_up_pressed: bool,
+    pub is_down_pressed: bool,
 }
 
 /// Scene camera
@@ -50,6 +52,8 @@ impl Camera {
                 is_backward_pressed: false,
                 is_left_pressed: false,
                 is_right_pressed: false,
+                is_up_pressed: false,
+                is_down_pressed: false,
             }
         }
     }
@@ -90,6 +94,15 @@ impl Camera {
         if self.controller.is_left_pressed {
             self.eye -= right * CAMERA_SPEED;
             self.target -= right * CAMERA_SPEED;
+        }
+
+        if self.controller.is_up_pressed {
+            self.eye += cgmath::Vector3::unit_y() * CAMERA_SPEED;
+            self.target += cgmath::Vector3::unit_y() * CAMERA_SPEED;
+        }
+        if self.controller.is_down_pressed {
+            self.eye -= cgmath::Vector3::unit_y() * CAMERA_SPEED;
+            self.target -= cgmath::Vector3::unit_y() * CAMERA_SPEED;
         }
     }
 

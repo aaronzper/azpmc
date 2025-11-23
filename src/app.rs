@@ -120,6 +120,14 @@ impl ApplicationHandler<()> for App {
                                 state.camera.controller.is_right_pressed = true;
                             }
 
+                            KeyCode::Space => {
+                                state.camera.controller.is_up_pressed = true;
+                            }
+
+                            KeyCode::ControlLeft => {
+                                state.camera.controller.is_down_pressed = true;
+                            }
+
                             _ => {},
                         };
                     } else {
@@ -138,6 +146,14 @@ impl ApplicationHandler<()> for App {
 
                             KeyCode::KeyD => {
                                 state.camera.controller.is_right_pressed = false;
+                            }
+
+                            KeyCode::Space => {
+                                state.camera.controller.is_up_pressed = false;
+                            }
+
+                            KeyCode::ControlLeft => {
+                                state.camera.controller.is_down_pressed = false;
                             }
 
                             _ => {},

@@ -4,7 +4,7 @@ use log::{info};
 use wgpu::{Device, Queue, RenderPassDescriptor, RenderPipeline, Surface, SurfaceConfiguration, util::DeviceExt};
 use winit::window::Window;
 
-use crate::{rendering::{camera::{Camera, CameraUniform}, textures::create_diffue_bing_group, vertex::Vertex}, settings};
+use crate::{rendering::{camera::{Camera, CameraUniform}, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bing_group}, vertex::Vertex}, world::chunk::Chunk};
 
 /// Stores state of the window and rendering
 pub struct RenderState {
@@ -27,10 +27,13 @@ pub struct RenderState {
 
     pub camera: Camera,
     pub camera_uniform: CameraUniform,
+    camera_buffer: wgpu::Buffer,
 
+    depth_texture: DepthTexture,
+
+    chunk: Chunk,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
-    camera_buffer: wgpu::Buffer,
 }
 
 impl RenderState {
@@ -176,7 +179,13 @@ impl RenderState {
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
-            depth_stencil: None, // 1.
+            depth_stencil: Some(wgpu::DepthStencilState { // 1.
+                format: DEPTH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less, // When to discard a px
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1, // 2.
                 mask: !0, // 3.
@@ -205,6 +214,8 @@ impl RenderState {
         Ok(Self {
             window,
 
+            depth_texture: DepthTexture::new(&device, &config, "depth_texture"),
+
             surface,
             device,
             queue,
@@ -217,18 +228,18 @@ impl RenderState {
 
             camera,
             camera_uniform,
+            camera_buffer,
 
             vertex_buffer,
             index_buffer,
-            camera_buffer,
         })
     }
 
     pub fn update(&mut self) {
+        self.depth_texture = DepthTexture::new(&self.device, &self.config, "depth_texture");
         self.camera.update_position();
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
-
     }
 
     pub fn resize(&mut self, w: u32, h: u32) {
@@ -276,7 +287,14 @@ impl RenderState {
                     store: wgpu::StoreOp::Store,
                 }
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &self.depth_texture.view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
             occlusion_query_set: None,
             timestamp_writes: None,
         });

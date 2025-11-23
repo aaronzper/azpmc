@@ -38,11 +38,11 @@ impl Camera {
             // +z is out of the screen
             eye: (0.0, 0.0, 0.8).into(),
             // have it look at the origin
-            target: (0.0, 0.0, 0.0).into(),
+            target: (0.0, 0.0, -0.25).into(),
             // which way is "up"
             up: cgmath::Vector3::unit_y(),
             aspect: width / height,
-            fovy: 90.0,
+            fovy: 45.0,
             znear: 0.1,
             zfar: 100.0,
             controller: Controller { 
@@ -74,20 +74,20 @@ impl Camera {
 
         if self.controller.is_forward_pressed {
             self.eye += forward * CAMERA_SPEED;
-            //self.target += forward * CAMERA_SPEED;
+            self.target += forward * CAMERA_SPEED;
         }
         if self.controller.is_backward_pressed {
             self.eye -= forward * CAMERA_SPEED;
-            //self.target -= forward * CAMERA_SPEED;
+            self.target -= forward * CAMERA_SPEED;
         }
 
         if self.controller.is_right_pressed {
             self.eye += right * CAMERA_SPEED;
-            //self.target += right * CAMERA_SPEED;
+            self.target += right * CAMERA_SPEED;
         }
         if self.controller.is_left_pressed {
             self.eye -= right * CAMERA_SPEED;
-            //self.target -= right * CAMERA_SPEED;
+            self.target -= right * CAMERA_SPEED;
         }
     }
 }

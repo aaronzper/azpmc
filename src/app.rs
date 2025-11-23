@@ -1,15 +1,17 @@
 use std::sync::Arc;
-use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
+use wgpu::hal::MAX_CONCURRENT_SHADER_STAGES;
+use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
 use crate::rendering::{RenderState};
 
 /// Stores top-level info on the entire app
 pub struct App {
     render_state: Option<RenderState>,
+    mouse_trapped: bool,
 }
 
 impl App {
     pub fn new() -> Self {
-        Self { render_state: None }
+        Self { render_state: None, mouse_trapped: false }
     }
 }
 
@@ -23,6 +25,29 @@ impl ApplicationHandler<()> for App {
         self.render_state = Some(
             pollster::block_on(RenderState::new(win)).unwrap()
         );
+    }
+
+    fn device_event(
+            &mut self,
+            event_loop: &ActiveEventLoop,
+            device_id: winit::event::DeviceId,
+            event: winit::event::DeviceEvent,
+        ) {
+        let render_state = match &mut self.render_state {
+            Some(x) => x,
+            None => return,
+        };
+
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                if self.mouse_trapped {
+                    let (dx, dy) = delta;
+                    render_state.camera.update_direction(dx, dy);
+                }
+            },
+
+            _ => {},
+        }
     }
 
     fn window_event(&mut self,
@@ -67,8 +92,14 @@ impl ApplicationHandler<()> for App {
                 if let Some(state) = &mut self.render_state {
                     if key_state.is_pressed() {
                         match code {
-                            KeyCode::Escape => {
+                            KeyCode::KeyQ => {
                                 event_loop.exit();
+                            }
+
+                            KeyCode::Escape => {
+                                state.window.set_cursor_visible(true);
+                                state.window.set_cursor_grab(winit::window::CursorGrabMode::None).unwrap();
+                                self.mouse_trapped = false;
                             }
 
                             KeyCode::KeyW => {
@@ -112,6 +143,16 @@ impl ApplicationHandler<()> for App {
                     }
                 }
             },
+
+            WindowEvent::MouseInput { state, button, .. } => {
+                if state.is_pressed() && button == MouseButton::Left {
+                    if let Some(result_state) = &self.render_state {
+                        result_state.window.set_cursor_grab(winit::window::CursorGrabMode::Locked).unwrap();
+                        result_state.window.set_cursor_visible(false);
+                        self.mouse_trapped = true;
+                    }
+                }
+            }
 
             _ => {},
         }

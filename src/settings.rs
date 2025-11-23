@@ -9,6 +9,7 @@ pub const SKY_COLOR: wgpu::Color = wgpu::Color {
 };
 
 pub const CAMERA_SPEED: f32 = 0.05;
+pub const MOUSE_SENSITIVITY: f32 = 0.007;
 
 pub const TEST_MODEL_V: &[Vertex] = &[
     Vertex { position: [-0.25, -0.25, 0.0], texture_cords: tex_cords_to_lin(1, 1) }, // BL

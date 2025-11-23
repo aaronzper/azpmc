@@ -225,7 +225,7 @@ impl RenderState {
     }
 
     pub fn update(&mut self) {
-        self.camera.update_camera();
+        self.camera.update_position();
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
 

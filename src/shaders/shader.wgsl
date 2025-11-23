@@ -1,3 +1,10 @@
+// See rendering::camera
+struct CameraUniform {
+    view_proj: mat4x4<f32>,
+};
+@group(1) @binding(0) // 1.
+var<uniform> camera: CameraUniform;
+
 // See rendering::vertex::Vertex;
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -14,7 +21,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
     out.texture_cords = in.texture_cords;
-    out.clip_position = vec4<f32>(in.position, 0.6);
+    out.clip_position = camera.view_proj * vec4<f32>(in.position, 1.0);
 
     return out;
 }

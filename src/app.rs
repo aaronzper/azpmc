@@ -40,6 +40,8 @@ impl ApplicationHandler<()> for App {
             WindowEvent::Resized(size) =>
                 render_state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
+                render_state.update();
+
                 match render_state.render() {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
@@ -62,8 +64,52 @@ impl ApplicationHandler<()> for App {
                     },
                     ..
             } => {
-                if code == KeyCode::Escape && key_state.is_pressed() {
-                    event_loop.exit();
+                if let Some(state) = &mut self.render_state {
+                    if key_state.is_pressed() {
+                        match code {
+                            KeyCode::Escape => {
+                                event_loop.exit();
+                            }
+
+                            KeyCode::KeyW => {
+                                state.camera.controller.is_forward_pressed = true;
+                            }
+
+                            KeyCode::KeyA => {
+                                state.camera.controller.is_left_pressed = true;
+                            }
+
+                            KeyCode::KeyS => {
+                                state.camera.controller.is_backward_pressed = true;
+                            }
+
+                            KeyCode::KeyD => {
+                                state.camera.controller.is_right_pressed = true;
+                            }
+
+                            _ => {},
+                        };
+                    } else {
+                        match code {
+                            KeyCode::KeyW => {
+                                state.camera.controller.is_forward_pressed = false;
+                            }
+
+                            KeyCode::KeyA => {
+                                state.camera.controller.is_left_pressed = false;
+                            }
+
+                            KeyCode::KeyS => {
+                                state.camera.controller.is_backward_pressed = false;
+                            }
+
+                            KeyCode::KeyD => {
+                                state.camera.controller.is_right_pressed = false;
+                            }
+
+                            _ => {},
+                        };
+                    }
                 }
             },
 

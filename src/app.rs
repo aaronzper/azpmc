@@ -1,7 +1,6 @@
 use std::sync::Arc;
-use wgpu::hal::MAX_CONCURRENT_SHADER_STAGES;
 use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::rendering::{RenderState};
+use crate::{rendering::RenderState, world::chunk::Chunk};
 
 /// Stores top-level info on the entire app
 pub struct App {
@@ -11,7 +10,10 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        Self { render_state: None, mouse_trapped: false }
+        Self { 
+            render_state: None,
+            mouse_trapped: false,
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use cgmath::{InnerSpace, Matrix3, Rad};
 
-use crate::settings::{CAMERA_SPEED, MOUSE_SENSITIVITY};
+use crate::settings::{CAMERA_SPEED, FOV, MOUSE_SENSITIVITY};
 
 #[rustfmt::skip]
 const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
@@ -36,13 +36,13 @@ impl Camera {
         Self {
             // position the camera 0.8 units back
             // +z is out of the screen
-            eye: (0.0, 0.0, 0.8).into(),
+            eye: (0.0, 64.0, 0.0).into(),
             // have it look at the origin
-            target: (0.0, 0.0, -0.25).into(),
+            target: (0.0, 64.0, -0.25).into(),
             // which way is "up"
             up: cgmath::Vector3::unit_y(),
             aspect: width / height,
-            fovy: 45.0,
+            fovy: FOV,
             znear: 0.1,
             zfar: 100.0,
             controller: Controller { 

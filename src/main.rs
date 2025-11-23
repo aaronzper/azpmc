@@ -5,6 +5,9 @@ use winit::event_loop::EventLoop;
 mod settings;
 /// Data types and code for rendering
 mod rendering;
+/// Data types and code for the game world
+mod world;
+/// The core App struct which drives the game
 mod app;
 
 fn main() -> anyhow::Result<()> {

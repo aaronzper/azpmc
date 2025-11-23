@@ -6,5 +6,7 @@ pub mod vertex;
 pub mod textures;
 /// Camera and helpers
 pub mod camera;
+/// Meshes
+pub mod mesh;
 
 pub use render_state::RenderState;

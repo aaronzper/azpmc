@@ -195,10 +195,12 @@ impl RenderState {
             cache: None, // 6.
         });
 
+        let chunk = Chunk::new();
+
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Text Vertex Buffer"),
-                contents: bytemuck::cast_slice(settings::TEST_MODEL_V),
+                contents: bytemuck::cast_slice(chunk.mesh.verticies.as_slice()),
                 usage: wgpu::BufferUsages::VERTEX,
             }
         );
@@ -206,7 +208,7 @@ impl RenderState {
         let index_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(settings::TEST_MODEL_I),
+                contents: bytemuck::cast_slice(chunk.mesh.indicies.as_slice()),
                 usage: wgpu::BufferUsages::INDEX,
             }
         );
@@ -230,6 +232,7 @@ impl RenderState {
             camera_uniform,
             camera_buffer,
 
+            chunk,
             vertex_buffer,
             index_buffer,
         })
@@ -303,8 +306,8 @@ impl RenderState {
         render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..settings::TEST_MODEL_I.len() as u32, 0, 0..1);
+        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        render_pass.draw_indexed(0..self.chunk.mesh.indicies.len() as u32, 0, 0..1);
 
         drop(render_pass); // Release borrow on the encoder
 

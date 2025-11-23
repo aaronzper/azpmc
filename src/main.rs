@@ -1,11 +1,10 @@
-use anyhow::Context;
 use app::App;
-use render_state::RenderState;
 use winit::event_loop::EventLoop;
 
 /// A bunch of constant values used throughout the app
 mod settings;
-mod render_state;
+/// Data types and code for rendering
+mod rendering;
 mod app;
 
 fn main() -> anyhow::Result<()> {

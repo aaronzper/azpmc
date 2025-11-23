@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use winit::{application::ApplicationHandler, event::{KeyEvent, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::render_state::{self, RenderState};
+use crate::rendering::{RenderState};
 
 /// Stores top-level info on the entire app
 pub struct App {

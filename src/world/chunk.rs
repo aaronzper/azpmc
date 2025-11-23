@@ -38,6 +38,22 @@ impl Chunk {
     }
 
     fn add_side(&mut self, x: usize, y: usize, z: usize, side: BlockSide) {
+        // Cull sides that face other blocks
+        if let Some((facing_x, facing_y, facing_z)) = match side {
+            // TODO: Check blocks in adjacent chunks
+            BlockSide::Front  if y > 0      => Some((x, y - 1, z)),
+            BlockSide::Back   if y < Y - 1  => Some((x, y + 1, z)),
+            BlockSide::Left   if x > 0      => Some((x - 1, y, z)),
+            BlockSide::Right  if x < X - 1  => Some((x + 1, y, z)),
+            BlockSide::Bottom if z > 0      => Some((x, y, z - 1)),
+            BlockSide::Top    if z < Z - 1  => Some((x, y, z + 1)),
+            _ => None,
+        } {
+            if !matches!(self.blocks[facing_x][facing_y][facing_z], BlockType::Air) {
+                return;
+            }
+        };
+
         let x_f = x as f32;
         let y_f = y as f32;
         let z_f = z as f32;

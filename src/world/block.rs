@@ -1,7 +1,8 @@
 /// The various block types
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BlockType {
     Air,
+    Water,
     Dirt,
     Grass,
 }
@@ -22,12 +23,24 @@ impl BlockType {
         match self {
             Self::Air => None,
 
+            Self::Water => Some((3,0)),
+
             Self::Dirt => Some((0,0)),
             Self::Grass => match side {
                 BlockSide::Top => Some((2,0)),
                 BlockSide::Bottom => Some((0,0)),
                 _ => Some((1,0)),
             }
+        }
+    }
+
+    /// Returns true if faces should be rendered adjacent to this block (water, air).
+    ///
+    /// Returns false otherwise.
+    pub fn is_renderable_adjacent(&self) -> bool {
+        match *self {
+            Self::Air | Self::Water => true,
+            _ => false,
         }
     }
 }

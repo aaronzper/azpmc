@@ -16,10 +16,14 @@ impl Chunk {
         for (x, row) in blocks.iter_mut().enumerate() {
             for (y, col) in row.iter_mut().enumerate() {
                 for z in 0..Z {
-                    if z < 60 - (x + y) {
+                    let elevation = x + y + 52;
+
+                    if z < elevation {
                         col[z] = BlockType::Dirt
-                    } else if z == 60 - (x + y) {
+                    } else if z == elevation {
                         col[z] = BlockType::Grass
+                    } else if z > elevation && z < 65 {
+                        col[z] = BlockType::Water;
                     }
                 }
             }
@@ -49,7 +53,8 @@ impl Chunk {
             BlockSide::Top    if z < Z - 1  => Some((x, y, z + 1)),
             _ => None,
         } {
-            if !matches!(self.blocks[facing_x][facing_y][facing_z], BlockType::Air) {
+            let facing = self.blocks[facing_x][facing_y][facing_z];
+            if !facing.is_renderable_adjacent() || self.blocks[x][y][z] == facing {
                 return;
             }
         };

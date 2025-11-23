@@ -1,4 +1,7 @@
-use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::Vertex}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}}};
+use cgmath::num_traits::ConstOne;
+use wgpu::naga::back::msl::sampler::Coord;
+
+use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::Vertex}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}, generation::sample_elevation}};
 
 const X: usize = CHUNK_SIZE;
 const Y: usize = CHUNK_SIZE;
@@ -15,13 +18,17 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(x: Coordinate, y: Coordinate) -> Self {
+    pub fn new(chunk_x: Coordinate, chunk_y: Coordinate) -> Self {
         let mut blocks = [[[BlockType::Air; Z]; Y]; X];
 
         for (x, row) in blocks.iter_mut().enumerate() {
-            for (_, col) in row.iter_mut().enumerate() {
+            let w_x = (x + (chunk_x as usize * CHUNK_SIZE)) as Coordinate;
+            for (y, col) in row.iter_mut().enumerate() {
+                let w_y = (y + (chunk_y as usize * CHUNK_SIZE)) as Coordinate;
+
+                let elevation = sample_elevation(w_x, w_y);
+
                 for z in 0..Z {
-                    let elevation = x + 52;
 
                     if z < elevation {
                         col[z] = BlockType::Dirt
@@ -29,6 +36,8 @@ impl Chunk {
                         col[z] = BlockType::Grass
                     } else if z > elevation && z < 65 {
                         col[z] = BlockType::Water;
+                    } else {
+                        break;
                     }
                 }
             }
@@ -36,8 +45,8 @@ impl Chunk {
 
         let mut out = Self {
             blocks,
-            pos_x: x,
-            pos_y: y,
+            pos_x: chunk_x,
+            pos_y: chunk_y,
             mesh: Mesh::new(),
         };
         out.generate_mesh();

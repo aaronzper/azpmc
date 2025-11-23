@@ -6,6 +6,8 @@ use crate::{rendering::mesh::Mesh, world::chunk::Chunk};
 pub mod chunk;
 /// Blocks
 pub mod block;
+/// World generation
+mod generation;
 
 pub type Coordinate = i32;
 
@@ -18,8 +20,8 @@ pub struct GameWorld {
 impl GameWorld {
     pub fn new() -> Self {
         let mut chunks = HashMap::new();
-        for x in 0..20 {
-            for y in 0..20 {
+        for x in 0..50 {
+            for y in 0..50 {
                 chunks.insert((x,y), Chunk::new(x,y));
             }
         }

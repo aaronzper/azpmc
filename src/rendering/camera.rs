@@ -43,7 +43,7 @@ impl Camera {
             aspect: width / height,
             fovy: FOV,
             znear: 0.1,
-            zfar: 200.0,
+            zfar: 800.0,
             controller: Controller { 
                 is_forward_pressed: false,
                 is_backward_pressed: false,

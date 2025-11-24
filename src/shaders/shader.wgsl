@@ -2,18 +2,29 @@
 struct CameraUniform {
     view_proj: mat4x4<f32>,
 };
-@group(1) @binding(0) // 1.
+@group(1) @binding(0)
 var<uniform> camera: CameraUniform;
+
+// See rendering::light
+struct LightUniform {
+    position: vec3<f32>,
+    color: vec3<f32>,
+};
+@group(2) @binding(0) 
+var<uniform> sun: LightUniform;
 
 // See rendering::vertex::Vertex;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) texture_cords: vec2<f32>,
+    @location(2) normal: vec3<f32>,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) texture_cords: vec2<f32>,
+    @location(1) world_normal: vec3<f32>,
+    @location(2) world_position: vec3<f32>,
 };
 
 @vertex
@@ -22,6 +33,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     out.texture_cords = in.texture_cords;
     out.clip_position = camera.view_proj * vec4<f32>(in.position, 1.0);
+    out.world_normal = in.normal;
+    out.world_position = in.position;
 
     return out;
 }
@@ -33,5 +46,16 @@ var s_diffuse: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.texture_cords);
+    let base_color = textureSample(t_diffuse, s_diffuse, in.texture_cords);
+    
+    let ambient_strength = 0.1;
+    let ambient_color = sun.color * ambient_strength;
+
+    let sun_dir = normalize(sun.position - in.world_position);
+
+    let diffuse_strength = max(dot(in.world_normal, sun_dir), 0.0);
+    let diffuse_color = sun.color * diffuse_strength;
+
+    let final_color = (ambient_color + diffuse_color) * base_color.xyz;
+    return vec4<f32>(final_color, base_color.a);
 }

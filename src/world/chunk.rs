@@ -1,7 +1,4 @@
-use cgmath::num_traits::ConstOne;
-use wgpu::naga::back::msl::sampler::Coord;
-
-use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::Vertex}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}, generation::sample_elevation}};
+use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::{NORMAL_BACK, NORMAL_DOWN, NORMAL_FRONT, NORMAL_LEFT, NORMAL_RIGHT, NORMAL_UP, Vertex}}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}, generation::sample_elevation}};
 
 const X: usize = CHUNK_SIZE;
 const Y: usize = CHUNK_SIZE;
@@ -88,38 +85,46 @@ impl Chunk {
             BlockSide::Front => [
                 Vertex { // BL
                     position: [x_f, z_f, y_f],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
+                    normal: NORMAL_FRONT,
                 },
                 Vertex { // TL
                     position: [x_f, z_f + 1.0, y_f],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y),
+                    normal: NORMAL_FRONT,
                 },
                 Vertex { // BR
                     position: [x_f + 1.0, z_f, y_f],
-                    texture_cords: tex_cords_to_lin(t_x, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x, t_y+1),
+                    normal: NORMAL_FRONT,
                 },
                 Vertex { // TR
                     position: [x_f + 1.0, z_f + 1.0, y_f],
-                    texture_cords: tex_cords_to_lin(t_x, t_y)
+                    texture_cords: tex_cords_to_lin(t_x, t_y),
+                    normal: NORMAL_FRONT,
                 },
             ],
 
             BlockSide::Back => [
                 Vertex { // BL
                     position: [x_f + 1.0, z_f, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
+                    normal: NORMAL_BACK,
                 },
                 Vertex { // TL
                     position: [x_f + 1.0, z_f + 1.0, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y),
+                    normal: NORMAL_BACK,
                 },
                 Vertex { // BR
                     position: [x_f, z_f, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x, t_y+1),
+                    normal: NORMAL_BACK,
                 },
                 Vertex { // TR
                     position: [x_f, z_f + 1.0, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x, t_y)
+                    texture_cords: tex_cords_to_lin(t_x, t_y),
+                    normal: NORMAL_BACK,
                 },
             ],
 
@@ -127,76 +132,92 @@ impl Chunk {
             BlockSide::Top => [
                 Vertex { // BL
                     position: [x_f, z_f + 1.0, y_f],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
+                    normal: NORMAL_UP,
                 },
                 Vertex { // TL
                     position: [x_f, z_f + 1.0, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y),
+                    normal: NORMAL_UP,
                 },
                 Vertex { // BR
                     position: [x_f + 1.0, z_f + 1.0, y_f],
-                    texture_cords: tex_cords_to_lin(t_x, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x, t_y+1),
+                    normal: NORMAL_UP,
                 },
                 Vertex { // TR
                     position: [x_f + 1.0, z_f + 1.0, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x, t_y)
+                    texture_cords: tex_cords_to_lin(t_x, t_y),
+                    normal: NORMAL_UP,
                 },
             ],
 
             BlockSide::Bottom => [
                 Vertex { // BL
                     position: [x_f, z_f, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
+                    normal: NORMAL_DOWN,
                 },
                 Vertex { // TL
                     position: [x_f, z_f, y_f],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y),
+                    normal: NORMAL_DOWN,
                 },
                 Vertex { // BR
                     position: [x_f + 1.0, z_f, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x, t_y+1),
+                    normal: NORMAL_DOWN,
                 },
                 Vertex { // TR
                     position: [x_f + 1.0, z_f, y_f],
-                    texture_cords: tex_cords_to_lin(t_x, t_y)
+                    texture_cords: tex_cords_to_lin(t_x, t_y),
+                    normal: NORMAL_DOWN,
                 },
             ],
 
             BlockSide::Left => [
                 Vertex { // BL
                     position: [x_f, z_f, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
+                    normal: NORMAL_LEFT,
                 },
                 Vertex { // TL
                     position: [x_f, z_f + 1.0, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y),
+                    normal: NORMAL_LEFT,
                 },
                 Vertex { // BR
                     position: [x_f, z_f, y_f],
-                    texture_cords: tex_cords_to_lin(t_x, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x, t_y+1),
+                    normal: NORMAL_LEFT,
                 },
                 Vertex { // TR
                     position: [x_f, z_f + 1.0, y_f],
-                    texture_cords: tex_cords_to_lin(t_x, t_y)
+                    texture_cords: tex_cords_to_lin(t_x, t_y),
+                    normal: NORMAL_LEFT,
                 },
             ],
 
             BlockSide::Right => [
                 Vertex { // BL
                     position: [x_f + 1.0, z_f, y_f],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
+                    normal: NORMAL_RIGHT,
                 },
                 Vertex { // TL
                     position: [x_f + 1.0, z_f + 1.0, y_f],
-                    texture_cords: tex_cords_to_lin(t_x+1, t_y)
+                    texture_cords: tex_cords_to_lin(t_x+1, t_y),
+                    normal: NORMAL_RIGHT,
                 },
                 Vertex { // BR
                     position: [x_f + 1.0, z_f, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x, t_y+1)
+                    texture_cords: tex_cords_to_lin(t_x, t_y+1),
+                    normal: NORMAL_RIGHT,
                 },
                 Vertex { // TR
                     position: [x_f + 1.0, z_f + 1.0, y_f + 1.0],
-                    texture_cords: tex_cords_to_lin(t_x, t_y)
+                    texture_cords: tex_cords_to_lin(t_x, t_y),
+                    normal: NORMAL_RIGHT,
                 },
             ],
         };

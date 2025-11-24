@@ -8,5 +8,7 @@ pub mod textures;
 pub mod camera;
 /// Meshes
 pub mod mesh;
+/// Lights!
+pub mod light;
 
 pub use render_state::RenderState;

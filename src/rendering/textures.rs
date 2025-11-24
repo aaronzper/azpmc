@@ -6,7 +6,7 @@ pub const fn tex_cords_to_lin(x: u8, y: u8) -> [f32; 2] {
     [multiplier * x as f32, multiplier * -1.0 * y as f32]
 }
 
-pub fn create_diffue_bing_group(device: &Device, queue: &Queue)
+pub fn create_diffue_bind_group(device: &Device, queue: &Queue)
     -> (BindGroupLayout, BindGroup) {
         let diffuse_bytes = include_bytes!("../../assets/textures.png");
         let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();

@@ -4,7 +4,7 @@ use log::{info};
 use wgpu::{Device, Queue, RenderPassDescriptor, RenderPipeline, Surface, SurfaceConfiguration, util::DeviceExt};
 use winit::window::Window;
 
-use crate::{rendering::{camera::{Camera, CameraUniform}, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bing_group}, vertex::Vertex}};
+use crate::rendering::{camera::{Camera, CameraUniform}, light::Light, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bind_group}, vertex::Vertex};
 
 /// Stores state of the window and rendering
 pub struct RenderState {
@@ -24,6 +24,7 @@ pub struct RenderState {
     render_pipeline: RenderPipeline,
     diffuse_bind_group: wgpu::BindGroup,
     camera_bind_group: wgpu::BindGroup,
+    sun_bind_group: wgpu::BindGroup,
 
     pub camera: Camera,
     pub camera_uniform: CameraUniform,
@@ -87,7 +88,7 @@ impl RenderState {
         };
 
         let (texture_bind_group_layout, diffuse_bind_group) =
-            create_diffue_bing_group(&device, &queue);
+            create_diffue_bind_group(&device, &queue);
 
         let camera = Camera::new(config.width as f32, config.height as f32);
         let mut camera_uniform = CameraUniform::new();
@@ -128,6 +129,39 @@ impl RenderState {
             label: Some("camera_bind_group"),
         });
 
+        let sun = Light::sun();
+        let sun_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("The Sun"),
+                contents: bytemuck::cast_slice(&[sun]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            }
+        );
+
+        let sun_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: None,
+            });
+
+        let sun_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &sun_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: sun_buffer.as_entire_binding(),
+            }],
+            label: None,
+        });
+
         let shader =
             device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
@@ -137,6 +171,7 @@ impl RenderState {
                 bind_group_layouts: &[
                     &texture_bind_group_layout,
                     &camera_bind_group_layout,
+                    &sun_bind_group_layout,
                 ],
                 push_constant_ranges: &[],
             }
@@ -205,6 +240,7 @@ impl RenderState {
             render_pipeline,
             diffuse_bind_group,
             camera_bind_group,
+            sun_bind_group,
 
             camera,
             camera_uniform,
@@ -279,6 +315,7 @@ impl RenderState {
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.sun_bind_group, &[]);
         for mesh in meshes {
             if !mesh.are_buffers_set() {
                 mesh.set_buffers(&self.device);

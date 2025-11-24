@@ -8,20 +8,29 @@ const Z: usize = 256;
 pub struct Chunk {
     blocks: [[[BlockType; Z]; Y]; X],
 
+    /// The world (block) coordinate of the starting corner of the chunk
     pos_x: Coordinate,
+    /// The world (block) coordinate of the starting corner of the chunk
     pos_y: Coordinate,
 
     pub mesh: Mesh,
 }
 
 impl Chunk {
-    pub fn new(chunk_x: Coordinate, chunk_y: Coordinate) -> Self {
+    /// Creates a new chunk, starting at world coordinates X and Y. Errors if
+    /// X or Y are not divisible by `CHUNK_SIZE`.
+    pub fn new(chunk_x: Coordinate, chunk_y: Coordinate) -> anyhow::Result<Self> {
+        if chunk_x as usize % CHUNK_SIZE != 0 || chunk_y as usize % CHUNK_SIZE != 0 {
+            anyhow::bail!("Provided chunk coordinates {} X and {} Y must be divisible by chunk size ({})",
+                chunk_x, chunk_y, CHUNK_SIZE);
+        }
+
         let mut blocks = [[[BlockType::Air; Z]; Y]; X];
 
         for (x, row) in blocks.iter_mut().enumerate() {
-            let w_x = (x + (chunk_x as usize * CHUNK_SIZE)) as Coordinate;
+            let w_x = (x as Coordinate) + chunk_x;
             for (y, col) in row.iter_mut().enumerate() {
-                let w_y = (y + (chunk_y as usize * CHUNK_SIZE)) as Coordinate;
+                let w_y = (y as Coordinate) + chunk_y;
 
                 let elevation = sample_elevation(w_x, w_y);
 
@@ -52,7 +61,7 @@ impl Chunk {
         };
         out.generate_mesh();
 
-        out
+        Ok(out)
     }
 
     fn add_side(&mut self, x: usize, y: usize, z: usize, side: BlockSide) {
@@ -75,8 +84,8 @@ impl Chunk {
             return;
         }
 
-        let x_f = (x + (self.pos_x as usize * CHUNK_SIZE)) as f32;
-        let y_f = (y + (self.pos_y as usize * CHUNK_SIZE)) as f32;
+        let x_f = (x as Coordinate + self.pos_x) as f32;
+        let y_f = (y as Coordinate + self.pos_y) as f32;
         let z_f = z as f32;
         let t_opt = self.blocks[x][y][z].texture(side);
 

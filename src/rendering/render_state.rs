@@ -396,13 +396,13 @@ impl RenderState {
     pub fn update(&mut self) {
         self.depth_texture = DepthTexture::new(&self.device, &self.config, "depth_texture");
 
-        let center = [160.0, 70.0, 160.0];
-        self.sun.update_view_proj(center, 453.5);
-        self.queue.write_buffer(&self.sun_buffer, 0, bytemuck::cast_slice(&[self.sun]));
-
         self.camera.update_position();
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+
+        let center = self.camera.get_position().into();
+        self.sun.update_view_proj(center, 150.0);
+        self.queue.write_buffer(&self.sun_buffer, 0, bytemuck::cast_slice(&[self.sun]));
     }
 
     pub fn resize(&mut self, w: u32, h: u32) {

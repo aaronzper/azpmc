@@ -9,10 +9,10 @@ pub struct Vertex {
 
 pub const NORMAL_UP: [f32; 3] = [0.0, 1.0, 0.0];
 pub const NORMAL_DOWN: [f32; 3] = [0.0, -1.0, 0.0];
-pub const NORMAL_LEFT: [f32; 3] = [1.0, 0.0, 0.0];
-pub const NORMAL_RIGHT: [f32; 3] = [-1.0, 0.0, 0.0];
-pub const NORMAL_FRONT: [f32; 3] = [0.0, 0.0, 1.0];
-pub const NORMAL_BACK: [f32; 3] = [0.0, 0.0, -1.0];
+pub const NORMAL_LEFT: [f32; 3] = [-1.0, 0.0, 0.0];
+pub const NORMAL_RIGHT: [f32; 3] = [1.0, 0.0, 0.0];
+pub const NORMAL_FRONT: [f32; 3] = [0.0, 0.0, -1.0];
+pub const NORMAL_BACK: [f32; 3] = [0.0, 0.0, 1.0];
 
 impl Vertex {
     /// Provides a buffer layout for a buffer of this type

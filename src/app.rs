@@ -23,7 +23,8 @@ impl App {
 impl ApplicationHandler<()> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let win_atts = Window::default_attributes()
-            .with_title("AZP MC");
+            .with_title("AZP MC")
+            .with_inner_size(winit::dpi::LogicalSize::new(1800, 1200));
 
         let win = Arc::new(event_loop.create_window(win_atts).unwrap());
 

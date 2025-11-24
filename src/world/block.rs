@@ -6,6 +6,7 @@ pub enum BlockType {
     Dirt,
     Grass,
     Sand,
+    Stone,
 }
 
 /// One side of a block
@@ -33,6 +34,7 @@ impl BlockType {
                 _ => Some((1,0)),
             },
             Self::Sand => Some((4,0)),
+            Self::Stone => Some((5,0)),
         }
     }
 

@@ -401,7 +401,7 @@ impl RenderState {
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
 
         let center = self.camera.get_position().into();
-        self.sun.update_view_proj(center, 150.0);
+        self.sun.update_view_proj(center, settings::SHADOW_RENDER_SZ);
         self.queue.write_buffer(&self.sun_buffer, 0, bytemuck::cast_slice(&[self.sun]));
     }
 

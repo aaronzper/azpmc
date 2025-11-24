@@ -27,9 +27,11 @@ impl Chunk {
 
                 for z in 0..Z {
 
-                    if z < elevation {
+                    if z < elevation - 3 {
+                        col[z] = BlockType::Stone
+                    } else if z < elevation {
                         col[z] = BlockType::Dirt
-                    } else if z == elevation && z == 64 {
+                    } else if z == elevation && z <= 64 {
                         col[z] = BlockType::Sand;
                     } else if z == elevation {
                         col[z] = BlockType::Grass

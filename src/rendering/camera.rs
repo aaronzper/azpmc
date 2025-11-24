@@ -1,9 +1,9 @@
-use cgmath::{InnerSpace, Matrix3, Rad};
+use cgmath::{InnerSpace, Matrix3, Point3, Rad};
 
 use crate::settings::{CAMERA_SPEED, FOV, MOUSE_SENSITIVITY};
 
 #[rustfmt::skip]
-const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
+pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
     cgmath::Vector4::new(1.0, 0.0, 0.0, 0.0),
     cgmath::Vector4::new(0.0, 1.0, 0.0, 0.0),
     cgmath::Vector4::new(0.0, 0.0, 0.5, 0.0),
@@ -128,6 +128,10 @@ impl Camera {
 
         self.target = self.eye + forward;
     }
+
+    pub fn get_position(&self) -> Point3<f32> {
+        self.eye
+    }
 }
 
 // This is so we can store this in a buffer
@@ -136,7 +140,7 @@ impl Camera {
 pub struct CameraUniform {
     // We can't use cgmath with bytemuck directly, so we'll have
     // to convert the Matrix4 into a 4x4 f32 array
-    view_proj: [[f32; 4]; 4],
+    pub view_proj: [[f32; 4]; 4],
 }
 
 impl CameraUniform {

@@ -20,8 +20,8 @@ pub struct GameWorld {
 impl GameWorld {
     pub fn new() -> Self {
         let mut chunks = HashMap::new();
-        for x in 0..40 {
-            for y in 0..40 {
+        for x in 0..20 {
+            for y in 0..20 {
                 chunks.insert((x,y), Chunk::new(x,y));
             }
         }

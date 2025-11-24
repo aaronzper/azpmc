@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::{rendering::RenderState, world::GameWorld};
+use crate::{rendering::RenderState, world::{Coordinate, GameWorld}};
 
 /// Stores top-level info on the entire app
 pub struct App {
@@ -73,6 +73,13 @@ impl ApplicationHandler<()> for App {
             WindowEvent::RedrawRequested => {
                 render_state.update();
 
+                let player_cords = render_state.camera.get_position();
+                let player = (
+                    player_cords.x.round() as Coordinate,
+                    player_cords.z.round() as Coordinate
+                );
+
+                self.world.update_chunks_to_player(player);
                 let mut meshes = self.world.get_meshes_mut();
                 match render_state.render(&mut meshes[..]) {
                     Ok(_) => {}

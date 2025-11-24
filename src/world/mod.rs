@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use anyhow::Context;
-use crate::{rendering::mesh::Mesh, settings::CHUNK_SIZE, world::chunk::Chunk};
+use cgmath::{EuclideanSpace, MetricSpace, Point2};
+use crate::{rendering::mesh::Mesh, settings::{CHUNK_SIZE, RENDER_DIST}, world::chunk::{Chunk, cords_to_chunk}};
 
 /// World chunks, which contain block data
 pub mod chunk;
@@ -19,21 +20,8 @@ pub struct GameWorld {
 
 impl GameWorld {
     pub fn new() -> Self {
-        let mut chunks = HashMap::new();
-        for x in 0..50 {
-            let world_x = x * CHUNK_SIZE as Coordinate;
-            for y in 0..50 {
-                let world_y = y * CHUNK_SIZE as Coordinate;
-                chunks.insert(
-                    (world_x, world_y),
-                    Chunk::new(world_x, world_y)
-                        .context("Failed to create Chunk").unwrap()
-                );
-            }
-        }
-
         Self {
-            chunks,
+            chunks: HashMap::new(),
         }
     }
 
@@ -45,5 +33,51 @@ impl GameWorld {
         }
 
         meshes.into()
+    }
+
+    pub fn update_chunks_to_player(&mut self, player: (Coordinate, Coordinate)) {
+        const RADIUS: isize = (RENDER_DIST * CHUNK_SIZE) as isize;
+        const RADIUS_SQ: f32 = (RADIUS * RADIUS) as f32;
+
+        let player_chunk = cords_to_chunk(player);
+        let player_chunk_pt =
+            Point2::new(player_chunk.0 as f32, player_chunk.1 as f32);
+
+        let to_remove: Vec<(i32, i32)> = self.chunks.keys()
+            .filter(|this_chunk| {
+                let this_chunk_pt =
+                    Point2::new(this_chunk.0 as f32, this_chunk.1 as f32);
+                let dist_sq = player_chunk_pt.distance2(this_chunk_pt);
+
+                dist_sq >= RADIUS_SQ
+            })
+            .cloned()
+            .collect();
+
+        for k in to_remove {
+            self.chunks.remove(&k);
+        }
+
+        let x_start = player_chunk.0 as isize - RADIUS + CHUNK_SIZE as isize;
+        let x_end = player_chunk.0 as isize + RADIUS;
+        let y_start = player_chunk.1 as isize - RADIUS + CHUNK_SIZE as isize;
+        let y_end = player_chunk.1 as isize + RADIUS;
+        for x in (x_start..x_end).step_by(CHUNK_SIZE) {
+            let f_x = x as f32;
+            let c_x = x as Coordinate;
+            for y in (y_start..y_end).step_by(CHUNK_SIZE) {
+                let f_y = y as f32;
+                let pt = Point2::new(f_x, f_y);
+                let dist_sq = player_chunk_pt.distance2(pt);
+
+                if dist_sq <= RADIUS_SQ {
+                    let c_y = y as Coordinate;
+                    let pos = (c_x, c_y);
+                    if !self.chunks.contains_key(&pos) {
+                        self.chunks.insert(pos, Chunk::new(c_x, c_y).unwrap());
+                    }
+                }
+            }
+        }
     }
 }

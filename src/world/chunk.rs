@@ -4,6 +4,15 @@ const X: usize = CHUNK_SIZE;
 const Y: usize = CHUNK_SIZE;
 const Z: usize = 256;
 
+/// Calculates the coordinats of the chunk that the given coordinates fall into
+pub fn cords_to_chunk(position: (Coordinate, Coordinate)) -> (Coordinate, Coordinate) {
+    fn cord_to_chunk(p: Coordinate) -> Coordinate {
+        p - p.rem_euclid(CHUNK_SIZE as Coordinate)
+    }
+
+    (cord_to_chunk(position.0), cord_to_chunk(position.1))
+}
+
 /// An individual chunk containing block data and its own 3D mesh.
 pub struct Chunk {
     blocks: [[[BlockType; Z]; Y]; X],

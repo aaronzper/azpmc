@@ -7,6 +7,8 @@ pub enum BlockType {
     Grass,
     Sand,
     Stone,
+    Log,
+    Leaves,
 }
 
 /// One side of a block
@@ -35,6 +37,11 @@ impl BlockType {
             },
             Self::Sand => Some((4,0)),
             Self::Stone => Some((5,0)),
+            Self::Log => match side {
+                BlockSide::Top | BlockSide::Bottom => Some((7,0)),
+                _ => Some((6,0)),
+            },
+            Self::Leaves => Some((2,0)),
         }
     }
 

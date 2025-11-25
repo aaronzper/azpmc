@@ -1,4 +1,6 @@
-use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::{NORMAL_BACK, NORMAL_DOWN, NORMAL_FRONT, NORMAL_LEFT, NORMAL_RIGHT, NORMAL_UP, Vertex}}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}, generation::sample_elevation}};
+use wgpu::naga::Block;
+
+use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::{NORMAL_BACK, NORMAL_DOWN, NORMAL_FRONT, NORMAL_LEFT, NORMAL_RIGHT, NORMAL_UP, Vertex}}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}, generation::{sample_elevation, sample_tree}}};
 
 const X: usize = CHUNK_SIZE;
 const Y: usize = CHUNK_SIZE;
@@ -36,25 +38,53 @@ impl Chunk {
 
         let mut blocks = [[[BlockType::Air; Z]; Y]; X];
 
-        for (x, row) in blocks.iter_mut().enumerate() {
+        for x in 0..X {
             let w_x = (x as Coordinate) + chunk_x;
-            for (y, col) in row.iter_mut().enumerate() {
+            for y in 0..Y {
                 let w_y = (y as Coordinate) + chunk_y;
 
                 let elevation = sample_elevation(w_x, w_y);
+                let tree = elevation >= 64 && sample_tree(w_x, w_y);
 
                 for z in 0..Z {
-
                     if z < elevation - 3 {
-                        col[z] = BlockType::Stone
+                        blocks[x][y][z] = BlockType::Stone
                     } else if z < elevation {
-                        col[z] = BlockType::Dirt
+                        blocks[x][y][z] = BlockType::Dirt
                     } else if z == elevation && z <= 64 {
-                        col[z] = BlockType::Sand;
+                        blocks[x][y][z] = BlockType::Sand;
                     } else if z == elevation {
-                        col[z] = BlockType::Grass
+                        blocks[x][y][z] = BlockType::Grass
                     } else if z > elevation && z <= 64 {
-                        col[z] = BlockType::Water;
+                        blocks[x][y][z] = BlockType::Water;
+                    } else if z < elevation + 5 && tree {
+                        blocks[x][y][z] = BlockType::Log;
+                    } else if z == elevation + 5 && tree {
+                        const LEAVES_DIM: usize = 3;
+                        let start_x = if x < LEAVES_DIM {
+                            0
+                        } else {
+                            x - LEAVES_DIM
+                        };
+
+                        let start_y = if y < LEAVES_DIM {
+                            0
+                        } else {
+                            y - LEAVES_DIM
+                        };
+
+                        for leaf_x in start_x..(x+LEAVES_DIM+1) {
+                            if leaf_x >= X { continue };
+                            for leaf_y in start_y..(y+LEAVES_DIM+1) {
+                                if leaf_y >= Y { continue };
+                                for leaf_z in z..z+3 {
+                                    if leaf_z >= Z { continue; }
+                                    blocks[leaf_x][leaf_y][leaf_z] =
+                                        BlockType::Leaves;
+                                }
+                            }
+                        }
+
                     } else {
                         break;
                     }

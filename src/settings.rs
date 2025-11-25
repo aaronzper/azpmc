@@ -7,7 +7,7 @@ pub const SKY_COLOR: wgpu::Color = wgpu::Color {
 };
 
 pub const SHADOW_RES: u32 = 8192;
-pub const SHADOW_RENDER_SZ: f32 = 250.0;
+pub const SHADOW_RENDER_SZ: f32 = 300.0;
 
 pub const CAMERA_SPEED: f32 = 0.50;
 pub const MOUSE_SENSITIVITY: f32 = 0.007;

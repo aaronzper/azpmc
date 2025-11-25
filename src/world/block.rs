@@ -41,7 +41,7 @@ impl BlockType {
                 BlockSide::Top | BlockSide::Bottom => Some((7,0)),
                 _ => Some((6,0)),
             },
-            Self::Leaves => Some((2,0)),
+            Self::Leaves => Some((8,0)),
         }
     }
 

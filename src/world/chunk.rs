@@ -15,6 +15,16 @@ pub fn cords_to_chunk(position: WorldPos) -> WorldPos {
     (cord_to_chunk(position.0), cord_to_chunk(position.1))
 }
 
+/// Calculates the chunk-local coordinates of the given cord pair
+pub fn cords_to_local(position: WorldPos) -> (usize, usize) {
+    let (x, z) = position;
+
+    let local_x = x.rem_euclid(CHUNK_SIZE as Coordinate) as usize;
+    let local_z = z.rem_euclid(CHUNK_SIZE as Coordinate) as usize;
+
+    (local_x, local_z)
+}
+
 /// An individual chunk containing block data and its own 3D mesh.
 pub struct Chunk {
     pub(super) blocks: [[[BlockType; Y]; Z]; X],

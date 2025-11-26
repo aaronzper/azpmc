@@ -1,13 +1,11 @@
-use std::{collections::{HashMap, HashSet}, time::{Duration, Instant}};
+use std::{collections::{HashMap, HashSet}, mem::take, time::{Duration, Instant}};
 use cgmath::{MetricSpace, Point2, Point3};
-use crate::{rendering::mesh::Mesh, settings::{CHUNK_SIZE, PHYSICS_TICK_RATE, RENDER_DIST}, world::{block::BlockType, chunk::{Chunk, cords_to_chunk}, entity::Entity}, vectors::GRAVITY_A};
+use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, vectors::GRAVITY_A, world::{block::BlockType, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation}};
 
 /// World chunks, which contain block data
 pub mod chunk;
 /// Blocks
 pub mod block;
-/// Entities and their physics
-pub mod entity;
 /// World generation
 mod generation;
 
@@ -34,7 +32,8 @@ pub struct GameWorld {
 
 impl GameWorld {
     pub fn new() -> Self {
-        let mut player = Entity::new(Point3::new(0.0, 300.0, 0.0));
+        let player_y = (sample_elevation(0, 0) + 2) as f32;
+        let mut player = Entity::new(Point3::new(0.0, player_y, 0.0), PLAYER_AABB);
         player.set_acceleration(GRAVITY_A);
 
         Self {
@@ -116,8 +115,7 @@ impl GameWorld {
                 if let Some(chunk) = self.chunks.get_mut(&chunk_pos) {
                     dirty_chunks.insert(chunk_pos);
 
-                    let local_x = x.rem_euclid(CHUNK_SIZE as Coordinate) as usize;
-                    let local_z = z.rem_euclid(CHUNK_SIZE as Coordinate) as usize;
+                    let (local_x, local_z) = cords_to_local((x, z));
                     chunk.blocks[local_x][local_z][y as usize] = *block;
                     Some(pos_3d)
                 } else {
@@ -136,6 +134,19 @@ impl GameWorld {
         }
     }
 
+    pub fn get_block(&self, pos: ThreeDimPos) -> Option<BlockType> {
+        let x = pos.0 as Coordinate;
+        let y = pos.1 as usize;
+        let z = pos.2 as Coordinate;
+
+        let chunk_pos = cords_to_chunk((x, z));
+        let (local_x, local_z) = cords_to_local((x, z));
+        match self.chunks.get(&chunk_pos) {
+            Some(chunk) => Some(chunk.blocks[local_x][local_z][y]),
+            None => None,
+        }
+    }
+
     pub fn player_mut(&mut self) -> &mut Entity {
         &mut self.player
     }
@@ -143,13 +154,15 @@ impl GameWorld {
     /// Executes a physics tick for all entities
     pub fn do_tick(&mut self) {
         const TICK_DURATION: Duration =
-            Duration::new(1 / PHYSICS_TICK_RATE as u64, 0);
+            Duration::new(0, ((1.0 / PHYSICS_TICK_RATE) * 1.0e9) as u32);
 
         if self.last_tick.elapsed() < TICK_DURATION {
             return;
         }
         self.last_tick = Instant::now();
 
-        self.player.tick();
+        let mut player = take(&mut self.player);
+        player.tick(self);
+        self.player = player;
     }
 }

@@ -9,6 +9,8 @@ mod rendering;
 mod world;
 /// The core App struct which drives the game
 mod app;
+/// Physics stuff
+mod physics;
 /// Vector math helpers
 mod vectors;
 

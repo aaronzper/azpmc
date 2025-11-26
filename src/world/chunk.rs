@@ -1,13 +1,13 @@
-use wgpu::naga::Block;
+use std::collections::HashMap;
 
-use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::{NORMAL_BACK, NORMAL_DOWN, NORMAL_FRONT, NORMAL_LEFT, NORMAL_RIGHT, NORMAL_UP, Vertex}}, settings::CHUNK_SIZE, world::{Coordinate, block::{BlockSide, BlockType}, generation::{sample_elevation, sample_tree}}};
+use crate::{rendering::{mesh::Mesh, textures::tex_cords_to_lin, vertex::{NORMAL_BACK, NORMAL_DOWN, NORMAL_FRONT, NORMAL_LEFT, NORMAL_RIGHT, NORMAL_UP, Vertex}}, settings::CHUNK_SIZE, world::{Coordinate, ThreeDimPos, WorldPos, block::{BlockSide, BlockType}, generation::{sample_elevation, sample_tree}}};
 
 const X: usize = CHUNK_SIZE;
-const Y: usize = CHUNK_SIZE;
-const Z: usize = 256;
+const Y: usize = 256;
+const Z: usize = CHUNK_SIZE;
 
 /// Calculates the coordinats of the chunk that the given coordinates fall into
-pub fn cords_to_chunk(position: (Coordinate, Coordinate)) -> (Coordinate, Coordinate) {
+pub fn cords_to_chunk(position: WorldPos) -> WorldPos {
     fn cord_to_chunk(p: Coordinate) -> Coordinate {
         p - p.rem_euclid(CHUNK_SIZE as Coordinate)
     }
@@ -17,76 +17,84 @@ pub fn cords_to_chunk(position: (Coordinate, Coordinate)) -> (Coordinate, Coordi
 
 /// An individual chunk containing block data and its own 3D mesh.
 pub struct Chunk {
-    blocks: [[[BlockType; Z]; Y]; X],
+    pub(super) blocks: [[[BlockType; Y]; Z]; X],
 
-    /// The world (block) coordinate of the starting corner of the chunk
-    pos_x: Coordinate,
-    /// The world (block) coordinate of the starting corner of the chunk
-    pos_y: Coordinate,
+    /// The world (block) position of the starting corner of the chunk
+    pos: WorldPos,
 
-    pub mesh: Mesh,
+    pub(super) mesh: Mesh,
 }
 
 impl Chunk {
-    /// Creates a new chunk, starting at world coordinates X and Y. Errors if
-    /// X or Y are not divisible by `CHUNK_SIZE`.
-    pub fn new(chunk_x: Coordinate, chunk_y: Coordinate) -> anyhow::Result<Self> {
-        if chunk_x as usize % CHUNK_SIZE != 0 || chunk_y as usize % CHUNK_SIZE != 0 {
-            anyhow::bail!("Provided chunk coordinates {} X and {} Y must be divisible by chunk size ({})",
-                chunk_x, chunk_y, CHUNK_SIZE);
+    /// Creates a new chunk, starting at world coordinates X and Z. Errors if
+    /// X or Z are not divisible by `CHUNK_SIZE`.
+    pub fn new(chunk_pos: WorldPos, scratch: &mut HashMap<ThreeDimPos, BlockType>) ->
+        anyhow::Result<Self> {
+
+        let (chunk_x, chunk_z) = chunk_pos;
+
+        if chunk_x as usize % CHUNK_SIZE != 0 || chunk_z as usize % CHUNK_SIZE != 0 {
+            anyhow::bail!("Provided chunk coordinates {} X and {} Z must be divisible by chunk size ({})",
+                chunk_x, chunk_z, CHUNK_SIZE);
         }
 
-        let mut blocks = [[[BlockType::Air; Z]; Y]; X];
+        let mut blocks = [[[BlockType::Air; Y]; Z]; X];
 
         for x in 0..X {
             let w_x = (x as Coordinate) + chunk_x;
-            for y in 0..Y {
-                let w_y = (y as Coordinate) + chunk_y;
+            for z in 0..Z {
+                let w_z = (z as Coordinate) + chunk_z;
 
-                let elevation = sample_elevation(w_x, w_y);
-                let tree = elevation >= 64 && sample_tree(w_x, w_y);
+                let elevation = sample_elevation(w_x, w_z);
+                let tree = elevation >= 64 && sample_tree(w_x, w_z);
 
-                for z in 0..Z {
-                    if z < elevation - 3 {
-                        blocks[x][y][z] = BlockType::Stone
-                    } else if z < elevation {
-                        blocks[x][y][z] = BlockType::Dirt
-                    } else if z == elevation && z <= 64 {
-                        blocks[x][y][z] = BlockType::Sand;
-                    } else if z == elevation {
-                        blocks[x][y][z] = BlockType::Grass
-                    } else if z > elevation && z <= 64 {
-                        blocks[x][y][z] = BlockType::Water;
-                    } else if z < elevation + 5 && tree {
-                        blocks[x][y][z] = BlockType::Log;
-                    } else if z == elevation + 5 && tree {
-                        const LEAVES_DIM: usize = 3;
-                        let start_x = if x < LEAVES_DIM {
-                            0
-                        } else {
-                            x - LEAVES_DIM
-                        };
+                for y in 0..Y {
+                    let pos_3d = (w_x, y as u8, w_z);
+                    let scratch_block = scratch.remove(&pos_3d);
 
-                        let start_y = if y < LEAVES_DIM {
-                            0
-                        } else {
-                            y - LEAVES_DIM
-                        };
+                    if scratch_block.is_some() {
+                        blocks[x][z][y] = scratch_block.unwrap();
+                        continue;
+                    }
 
-                        for leaf_x in start_x..(x+LEAVES_DIM+1) {
-                            if leaf_x >= X { continue };
-                            for leaf_y in start_y..(y+LEAVES_DIM+1) {
-                                if leaf_y >= Y { continue };
-                                for leaf_z in z..z+3 {
-                                    if leaf_z >= Z { continue; }
-                                    blocks[leaf_x][leaf_y][leaf_z] =
-                                        BlockType::Leaves;
+                    if y < elevation - 3 {
+                        blocks[x][z][y] = BlockType::Stone
+                    } else if y < elevation {
+                        blocks[x][z][y] = BlockType::Dirt
+                    } else if y == elevation && y <= 64 {
+                        blocks[x][z][y] = BlockType::Sand;
+                    } else if y == elevation {
+                        blocks[x][z][y] = BlockType::Grass
+                    } else if y > elevation && y <= 64 {
+                        blocks[x][z][y] = BlockType::Water;
+                    } else if y < elevation + 5 && tree {
+                        blocks[x][z][y] = BlockType::Log;
+                    } else if y == elevation + 5 && tree {
+                        const LEAVES_DIM: isize = 3;
+                        let start_x = x as isize - LEAVES_DIM;
+                        let start_z = z as isize - LEAVES_DIM;
+                        let end_x = x as isize + LEAVES_DIM + 1;
+                        let end_z = z as isize + LEAVES_DIM + 1;
+
+                        for leaf_x in start_x..end_x {
+                            for leaf_z in start_z..end_z {
+                                for leaf_y in y..y+3 {
+                                    if leaf_x >= 0 && leaf_x < X as isize &&
+                                       leaf_y < Y &&
+                                       leaf_z >= 0 && leaf_z < Z as isize {
+                                        blocks[leaf_x as usize][leaf_z as usize][leaf_y] =
+                                            BlockType::Leaves;
+                                    } else {
+                                        let pos = (
+                                            chunk_x + leaf_x as Coordinate,
+                                            leaf_y as u8,
+                                            chunk_z + leaf_z as Coordinate,
+                                        );
+                                        scratch.insert(pos, BlockType::Leaves);
+                                    }
                                 }
                             }
                         }
-
-                    } else {
-                        break;
                     }
                 }
             }
@@ -94,8 +102,7 @@ impl Chunk {
 
         let mut out = Self {
             blocks,
-            pos_x: chunk_x,
-            pos_y: chunk_y,
+            pos: (chunk_x, chunk_z),
             mesh: Mesh::new(),
         };
         out.generate_mesh();
@@ -107,26 +114,26 @@ impl Chunk {
         // Cull sides that face other blocks
         if let Some((facing_x, facing_y, facing_z)) = match side {
             // TODO: Check blocks in adjacent chunks
-            BlockSide::Front  if y > 0      => Some((x, y - 1, z)),
-            BlockSide::Back   if y < Y - 1  => Some((x, y + 1, z)),
+            BlockSide::Bottom  if y > 0      => Some((x, y - 1, z)),
+            BlockSide::Top   if y < Y - 1  => Some((x, y + 1, z)),
             BlockSide::Left   if x > 0      => Some((x - 1, y, z)),
             BlockSide::Right  if x < X - 1  => Some((x + 1, y, z)),
-            BlockSide::Bottom if z > 0      => Some((x, y, z - 1)),
-            BlockSide::Top    if z < Z - 1  => Some((x, y, z + 1)),
+            BlockSide::Front if z > 0      => Some((x, y, z - 1)),
+            BlockSide::Back    if z < Z - 1  => Some((x, y, z + 1)),
             _ => None,
         } {
-            let facing = self.blocks[facing_x][facing_y][facing_z];
-            if !facing.is_renderable_adjacent() || self.blocks[x][y][z] == facing {
+            let facing = self.blocks[facing_x][facing_z][facing_y];
+            if !facing.is_renderable_adjacent() || self.blocks[x][z][y] == facing {
                 return;
             }
         } else if let BlockSide::Bottom = side {
             return;
         }
 
-        let x_f = (x as Coordinate + self.pos_x) as f32;
-        let y_f = (y as Coordinate + self.pos_y) as f32;
-        let z_f = z as f32;
-        let t_opt = self.blocks[x][y][z].texture(side);
+        let x_f = (x as Coordinate + self.pos.0) as f32;
+        let z_f = (z as Coordinate + self.pos.1) as f32;
+        let y_f = y as f32;
+        let t_opt = self.blocks[x][z][y].texture(side);
 
         if let None = t_opt {
             return;
@@ -136,22 +143,22 @@ impl Chunk {
         let verticies = match side {
             BlockSide::Front => [
                 Vertex { // BL
-                    position: [x_f, z_f, y_f],
+                    position: [x_f, y_f, z_f],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
                     normal: NORMAL_FRONT,
                 },
                 Vertex { // TL
-                    position: [x_f, z_f + 1.0, y_f],
+                    position: [x_f, y_f + 1.0, z_f],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y),
                     normal: NORMAL_FRONT,
                 },
                 Vertex { // BR
-                    position: [x_f + 1.0, z_f, y_f],
+                    position: [x_f + 1.0, y_f, z_f],
                     texture_cords: tex_cords_to_lin(t_x, t_y+1),
                     normal: NORMAL_FRONT,
                 },
                 Vertex { // TR
-                    position: [x_f + 1.0, z_f + 1.0, y_f],
+                    position: [x_f + 1.0, y_f + 1.0, z_f],
                     texture_cords: tex_cords_to_lin(t_x, t_y),
                     normal: NORMAL_FRONT,
                 },
@@ -159,22 +166,22 @@ impl Chunk {
 
             BlockSide::Back => [
                 Vertex { // BL
-                    position: [x_f + 1.0, z_f, y_f + 1.0],
+                    position: [x_f + 1.0, y_f, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
                     normal: NORMAL_BACK,
                 },
                 Vertex { // TL
-                    position: [x_f + 1.0, z_f + 1.0, y_f + 1.0],
+                    position: [x_f + 1.0, y_f + 1.0, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y),
                     normal: NORMAL_BACK,
                 },
                 Vertex { // BR
-                    position: [x_f, z_f, y_f + 1.0],
+                    position: [x_f, y_f, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x, t_y+1),
                     normal: NORMAL_BACK,
                 },
                 Vertex { // TR
-                    position: [x_f, z_f + 1.0, y_f + 1.0],
+                    position: [x_f, y_f + 1.0, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x, t_y),
                     normal: NORMAL_BACK,
                 },
@@ -183,22 +190,22 @@ impl Chunk {
 
             BlockSide::Top => [
                 Vertex { // BL
-                    position: [x_f, z_f + 1.0, y_f],
+                    position: [x_f, y_f + 1.0, z_f],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
                     normal: NORMAL_UP,
                 },
                 Vertex { // TL
-                    position: [x_f, z_f + 1.0, y_f + 1.0],
+                    position: [x_f, y_f + 1.0, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y),
                     normal: NORMAL_UP,
                 },
                 Vertex { // BR
-                    position: [x_f + 1.0, z_f + 1.0, y_f],
+                    position: [x_f + 1.0, y_f + 1.0, z_f],
                     texture_cords: tex_cords_to_lin(t_x, t_y+1),
                     normal: NORMAL_UP,
                 },
                 Vertex { // TR
-                    position: [x_f + 1.0, z_f + 1.0, y_f + 1.0],
+                    position: [x_f + 1.0, y_f + 1.0, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x, t_y),
                     normal: NORMAL_UP,
                 },
@@ -206,22 +213,22 @@ impl Chunk {
 
             BlockSide::Bottom => [
                 Vertex { // BL
-                    position: [x_f, z_f, y_f + 1.0],
+                    position: [x_f, y_f, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
                     normal: NORMAL_DOWN,
                 },
                 Vertex { // TL
-                    position: [x_f, z_f, y_f],
+                    position: [x_f, y_f, z_f],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y),
                     normal: NORMAL_DOWN,
                 },
                 Vertex { // BR
-                    position: [x_f + 1.0, z_f, y_f + 1.0],
+                    position: [x_f + 1.0, y_f, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x, t_y+1),
                     normal: NORMAL_DOWN,
                 },
                 Vertex { // TR
-                    position: [x_f + 1.0, z_f, y_f],
+                    position: [x_f + 1.0, y_f, z_f],
                     texture_cords: tex_cords_to_lin(t_x, t_y),
                     normal: NORMAL_DOWN,
                 },
@@ -229,22 +236,22 @@ impl Chunk {
 
             BlockSide::Left => [
                 Vertex { // BL
-                    position: [x_f, z_f, y_f + 1.0],
+                    position: [x_f, y_f, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
                     normal: NORMAL_LEFT,
                 },
                 Vertex { // TL
-                    position: [x_f, z_f + 1.0, y_f + 1.0],
+                    position: [x_f, y_f + 1.0, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y),
                     normal: NORMAL_LEFT,
                 },
                 Vertex { // BR
-                    position: [x_f, z_f, y_f],
+                    position: [x_f, y_f, z_f],
                     texture_cords: tex_cords_to_lin(t_x, t_y+1),
                     normal: NORMAL_LEFT,
                 },
                 Vertex { // TR
-                    position: [x_f, z_f + 1.0, y_f],
+                    position: [x_f, y_f + 1.0, z_f],
                     texture_cords: tex_cords_to_lin(t_x, t_y),
                     normal: NORMAL_LEFT,
                 },
@@ -252,22 +259,22 @@ impl Chunk {
 
             BlockSide::Right => [
                 Vertex { // BL
-                    position: [x_f + 1.0, z_f, y_f],
+                    position: [x_f + 1.0, y_f, z_f],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y+1),
                     normal: NORMAL_RIGHT,
                 },
                 Vertex { // TL
-                    position: [x_f + 1.0, z_f + 1.0, y_f],
+                    position: [x_f + 1.0, y_f + 1.0, z_f],
                     texture_cords: tex_cords_to_lin(t_x+1, t_y),
                     normal: NORMAL_RIGHT,
                 },
                 Vertex { // BR
-                    position: [x_f + 1.0, z_f, y_f + 1.0],
+                    position: [x_f + 1.0, y_f, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x, t_y+1),
                     normal: NORMAL_RIGHT,
                 },
                 Vertex { // TR
-                    position: [x_f + 1.0, z_f + 1.0, y_f + 1.0],
+                    position: [x_f + 1.0, y_f + 1.0, z_f + 1.0],
                     texture_cords: tex_cords_to_lin(t_x, t_y),
                     normal: NORMAL_RIGHT,
                 },
@@ -297,5 +304,11 @@ impl Chunk {
                 }
             }
         }
+    }
+
+    /// Throws out any existing mesh and regenerates it
+    pub fn update_mesh(&mut self) {
+        self.mesh = Mesh::new();
+        self.generate_mesh();
     }
 }

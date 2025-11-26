@@ -1,6 +1,7 @@
 use std::sync::Arc;
+use cgmath::{InnerSpace, Vector2, Vector3, Zero};
 use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::{rendering::RenderState, world::{Coordinate, GameWorld}};
+use crate::{rendering::RenderState, settings::MOVE_SPEED, vectors::{replace_xz, xyz_to_xz}, world::{Coordinate, GameWorld}};
 
 /// Stores top-level info on the entire app
 pub struct App {
@@ -49,6 +50,14 @@ impl ApplicationHandler<()> for App {
                 if self.mouse_trapped {
                     let (dx, dy) = delta;
                     render_state.camera.update_direction(dx, dy);
+
+                    let player = self.world.player_mut();
+                    let player_v = player.get_velocity();
+                    let old_player_dir = xyz_to_xz(player_v);
+                    let new_player_dir = 
+                        xyz_to_xz(render_state.camera.get_direction()).normalize()
+                        * old_player_dir.magnitude();
+                    player.set_velocity(replace_xz(player_v, new_player_dir));
                 }
             },
 
@@ -71,15 +80,16 @@ impl ApplicationHandler<()> for App {
             WindowEvent::Resized(size) =>
                 render_state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
+                // Calculate physics and load new chunks
+                self.world.do_tick();
+                self.world.update_chunks_to_player();
+
+                // Update camera position to player's
+                render_state.camera
+                    .update_position(self.world.player_mut().get_precise_pos());
+
+                // Render!
                 render_state.update();
-
-                let player_cords = render_state.camera.get_position();
-                let player = (
-                    player_cords.x.round() as Coordinate,
-                    player_cords.z.round() as Coordinate
-                );
-
-                self.world.update_chunks_to_player(player);
                 let mut meshes = self.world.get_meshes_mut();
                 match render_state.render(&mut meshes[..]) {
                     Ok(_) => {}
@@ -103,74 +113,84 @@ impl ApplicationHandler<()> for App {
                     },
                     ..
             } => {
-                if let Some(state) = &mut self.render_state {
-                    if key_state.is_pressed() {
-                        match code {
-                            KeyCode::KeyQ => {
-                                event_loop.exit();
-                            }
+                if key_state.is_pressed() {
+                    match code {
+                        KeyCode::KeyQ => {
+                            event_loop.exit();
+                        }
 
-                            KeyCode::Escape => {
-                                state.window.set_cursor_visible(true);
-                                state.window.set_cursor_grab(winit::window::CursorGrabMode::None).unwrap();
-                                self.mouse_trapped = false;
-                            }
+                        KeyCode::Escape => {
+                            render_state.window.set_cursor_visible(true);
+                            render_state.window.set_cursor_grab(winit::window::CursorGrabMode::None).unwrap();
+                            self.mouse_trapped = false;
+                        }
 
-                            KeyCode::KeyW => {
-                                state.camera.controller.is_forward_pressed = true;
-                            }
+                        KeyCode::KeyW => {
+                            let player = self.world.player_mut();
+                            let p_v_3d = player.get_velocity();
+                            let mut p_v_2d = xyz_to_xz(p_v_3d);
+                            let direction = if p_v_2d.magnitude().is_zero() {
+                                xyz_to_xz(render_state.camera.get_direction())
+                                    .normalize()
+                            } else {
+                                p_v_2d.normalize()
+                            };
 
-                            KeyCode::KeyA => {
-                                state.camera.controller.is_left_pressed = true;
-                            }
+                            let movement_v = direction * MOVE_SPEED;
+                            p_v_2d += movement_v;
+                            player.set_velocity(replace_xz(p_v_3d, p_v_2d));
+                        }
 
-                            KeyCode::KeyS => {
-                                state.camera.controller.is_backward_pressed = true;
-                            }
+                        KeyCode::KeyA => {
 
-                            KeyCode::KeyD => {
-                                state.camera.controller.is_right_pressed = true;
-                            }
+                        }
 
-                            KeyCode::Space => {
-                                state.camera.controller.is_up_pressed = true;
-                            }
+                        KeyCode::KeyS => {
 
-                            KeyCode::ControlLeft => {
-                                state.camera.controller.is_down_pressed = true;
-                            }
+                        }
 
-                            _ => {},
-                        };
-                    } else {
-                        match code {
-                            KeyCode::KeyW => {
-                                state.camera.controller.is_forward_pressed = false;
-                            }
+                        KeyCode::KeyD => {
 
-                            KeyCode::KeyA => {
-                                state.camera.controller.is_left_pressed = false;
-                            }
+                        }
 
-                            KeyCode::KeyS => {
-                                state.camera.controller.is_backward_pressed = false;
-                            }
+                        KeyCode::Space => {
 
-                            KeyCode::KeyD => {
-                                state.camera.controller.is_right_pressed = false;
-                            }
+                        }
 
-                            KeyCode::Space => {
-                                state.camera.controller.is_up_pressed = false;
-                            }
+                        KeyCode::ControlLeft => {
 
-                            KeyCode::ControlLeft => {
-                                state.camera.controller.is_down_pressed = false;
-                            }
+                        }
 
-                            _ => {},
-                        };
-                    }
+                        _ => {},
+                    };
+                } else {
+                    match code {
+                        KeyCode::KeyW => {
+
+                        }
+
+                        KeyCode::KeyA => {
+
+                        }
+
+                        KeyCode::KeyS => {
+
+                        }
+
+                        KeyCode::KeyD => {
+
+                        }
+
+                        KeyCode::Space => {
+
+                        }
+
+                        KeyCode::ControlLeft => {
+
+                        }
+
+                        _ => {},
+                    };
                 }
             },
 

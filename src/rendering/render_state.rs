@@ -396,7 +396,6 @@ impl RenderState {
     pub fn update(&mut self) {
         self.depth_texture = DepthTexture::new(&self.device, &self.config, "depth_texture");
 
-        self.camera.update_position();
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
 

@@ -19,3 +19,6 @@ pub const RENDER_DIST: usize = 24;
 
 pub const SEED: u32 = 613;
 
+/// Ticks per second
+pub const PHYSICS_TICK_RATE: f32 = 60.0;
+pub const MOVE_SPEED: f32 = 1.0;

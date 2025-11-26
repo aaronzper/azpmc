@@ -1,4 +1,4 @@
-use cgmath::{InnerSpace, Matrix3, Point3, Rad};
+use cgmath::{InnerSpace, Matrix3, Point3, Rad, Vector3};
 
 use crate::settings::{CAMERA_SPEED, FOV, MOUSE_SENSITIVITY};
 
@@ -69,38 +69,11 @@ impl Camera {
         return OPENGL_TO_WGPU_MATRIX * proj * view;
     }
 
-    /// Updates the camera position by one tick based off what keys are
-    /// currently pressed
-    pub fn update_position(&mut self) {
-        let forward = self.target - self.eye;
-        let right = forward.cross(self.up).normalize();
-
-        if self.controller.is_forward_pressed {
-            self.eye += forward * CAMERA_SPEED;
-            self.target += forward * CAMERA_SPEED;
-        }
-        if self.controller.is_backward_pressed {
-            self.eye -= forward * CAMERA_SPEED;
-            self.target -= forward * CAMERA_SPEED;
-        }
-
-        if self.controller.is_right_pressed {
-            self.eye += right * CAMERA_SPEED;
-            self.target += right * CAMERA_SPEED;
-        }
-        if self.controller.is_left_pressed {
-            self.eye -= right * CAMERA_SPEED;
-            self.target -= right * CAMERA_SPEED;
-        }
-
-        if self.controller.is_up_pressed {
-            self.eye += cgmath::Vector3::unit_y() * CAMERA_SPEED;
-            self.target += cgmath::Vector3::unit_y() * CAMERA_SPEED;
-        }
-        if self.controller.is_down_pressed {
-            self.eye -= cgmath::Vector3::unit_y() * CAMERA_SPEED;
-            self.target -= cgmath::Vector3::unit_y() * CAMERA_SPEED;
-        }
+    /// Updates the camera position
+    pub fn update_position(&mut self, new_pos: Point3<f32>) {
+        let diff = new_pos - self.eye;
+        self.eye = new_pos;
+        self.target += diff;
     }
 
     /// Updates the camera direction from the given delta movement from the
@@ -131,6 +104,10 @@ impl Camera {
 
     pub fn get_position(&self) -> Point3<f32> {
         self.eye
+    }
+
+    pub fn get_direction(&self) -> Vector3<f32> {
+        self.target - self.eye
     }
 }
 

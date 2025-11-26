@@ -1,11 +1,13 @@
-use std::collections::{HashMap, HashSet};
-use cgmath::{MetricSpace, Point2};
-use crate::{rendering::mesh::Mesh, settings::{CHUNK_SIZE, RENDER_DIST}, world::{block::BlockType, chunk::{Chunk, cords_to_chunk}}};
+use std::{collections::{HashMap, HashSet}, time::{Duration, Instant}};
+use cgmath::{MetricSpace, Point2, Point3};
+use crate::{rendering::mesh::Mesh, settings::{CHUNK_SIZE, PHYSICS_TICK_RATE, RENDER_DIST}, world::{block::BlockType, chunk::{Chunk, cords_to_chunk}, entity::Entity}, vectors::GRAVITY_A};
 
 /// World chunks, which contain block data
 pub mod chunk;
 /// Blocks
 pub mod block;
+/// Entities and their physics
+pub mod entity;
 /// World generation
 mod generation;
 
@@ -23,13 +25,23 @@ pub struct GameWorld {
     /// Blocks generated into adjacent chunks that are yet to be put into a
     /// chunk themselves
     block_scratch: HashMap<ThreeDimPos, BlockType>,
+    /// The player
+    player: Entity,
+    /// The last time a physics tick was calculated. Used for enforcing the tick
+    /// rate
+    last_tick: Instant,
 }
 
 impl GameWorld {
     pub fn new() -> Self {
+        let mut player = Entity::new(Point3::new(0.0, 300.0, 0.0));
+        player.set_acceleration(GRAVITY_A);
+
         Self {
             chunks: HashMap::new(),
             block_scratch: HashMap::new(),
+            player,
+            last_tick: Instant::now(),
         }
     }
 
@@ -43,11 +55,12 @@ impl GameWorld {
         meshes.into()
     }
 
-    pub fn update_chunks_to_player(&mut self, player: WorldPos) {
+    pub fn update_chunks_to_player(&mut self) {
         const RADIUS: isize = (RENDER_DIST * CHUNK_SIZE) as isize;
         const RADIUS_SQ: f32 = (RADIUS * RADIUS) as f32;
 
-        let player_chunk = cords_to_chunk(player);
+        let (player_x, _, player_z) = self.player.get_world_pos();
+        let player_chunk = cords_to_chunk((player_x, player_z));
         let player_chunk_pt =
             Point2::new(player_chunk.0 as f32, player_chunk.1 as f32);
 
@@ -121,5 +134,22 @@ impl GameWorld {
         for chunk in dirty_chunks {
             self.chunks.get_mut(&chunk).unwrap().update_mesh();
         }
+    }
+
+    pub fn player_mut(&mut self) -> &mut Entity {
+        &mut self.player
+    }
+
+    /// Executes a physics tick for all entities
+    pub fn do_tick(&mut self) {
+        const TICK_DURATION: Duration =
+            Duration::new(1 / PHYSICS_TICK_RATE as u64, 0);
+
+        if self.last_tick.elapsed() < TICK_DURATION {
+            return;
+        }
+        self.last_tick = Instant::now();
+
+        self.player.tick();
     }
 }

@@ -9,6 +9,8 @@ mod rendering;
 mod world;
 /// The core App struct which drives the game
 mod app;
+/// Vector math helpers
+mod vectors;
 
 fn main() -> anyhow::Result<()> {
     env_logger::builder().filter_level(log::LevelFilter::Info).init();

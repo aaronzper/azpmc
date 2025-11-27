@@ -53,9 +53,3 @@ impl AABB {
         (position + self.min_off, position + self.max_off)
     }
 }
-
-impl Default for AABB {
-    fn default() -> Self {
-        Self::new(0.0, 0.0, 0.0, Point3::new(0.0, 0.0, 0.0)).unwrap()
-    }
-}

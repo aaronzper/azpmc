@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use cgmath::{InnerSpace, Vector2, Vector3, Zero};
 use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::{rendering::RenderState, settings::MOVE_SPEED, vectors::{replace_xz, xyz_to_xz}, world::{Coordinate, GameWorld}};
+use crate::{physics::Entity, rendering::RenderState, settings::MOVE_SPEED, vectors::{replace_xz, xyz_to_xz}, world::{Coordinate, GameWorld}};
 
 /// Stores top-level info on the entire app
 pub struct App {
@@ -81,6 +81,8 @@ impl ApplicationHandler<()> for App {
                 render_state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
                 // Calculate physics and load new chunks
+                self.world.player_mut().facing =
+                    render_state.camera.get_direction();
                 self.world.do_tick();
                 self.world.update_chunks_to_player();
 
@@ -126,39 +128,27 @@ impl ApplicationHandler<()> for App {
                         }
 
                         KeyCode::KeyW => {
-                            let player = self.world.player_mut();
-                            let p_v_3d = player.get_velocity();
-                            let mut p_v_2d = xyz_to_xz(p_v_3d);
-                            let direction = if p_v_2d.magnitude().is_zero() {
-                                xyz_to_xz(render_state.camera.get_direction())
-                                    .normalize()
-                            } else {
-                                p_v_2d.normalize()
-                            };
-
-                            let movement_v = direction * MOVE_SPEED;
-                            p_v_2d += movement_v;
-                            player.set_velocity(replace_xz(p_v_3d, p_v_2d));
+                            self.world.player_mut().w_pressed = true;
                         }
 
                         KeyCode::KeyA => {
-
+                            self.world.player_mut().a_pressed = true;
                         }
 
                         KeyCode::KeyS => {
-
+                            self.world.player_mut().s_pressed = true;
                         }
 
                         KeyCode::KeyD => {
+                            self.world.player_mut().d_pressed = true;
+                        }
 
+                        KeyCode::ShiftLeft | KeyCode::ShiftRight => {
+                            self.world.player_mut().sprint = true;
                         }
 
                         KeyCode::Space => {
-
-                        }
-
-                        KeyCode::ControlLeft => {
-
+                            self.world.player_mut().jump = true;
                         }
 
                         _ => {},
@@ -166,27 +156,23 @@ impl ApplicationHandler<()> for App {
                 } else {
                     match code {
                         KeyCode::KeyW => {
-
+                            self.world.player_mut().w_pressed = false;
                         }
 
                         KeyCode::KeyA => {
-
+                            self.world.player_mut().a_pressed = false;
                         }
 
                         KeyCode::KeyS => {
-
+                            self.world.player_mut().s_pressed = false;
                         }
 
                         KeyCode::KeyD => {
-
+                            self.world.player_mut().d_pressed = false;
                         }
 
-                        KeyCode::Space => {
-
-                        }
-
-                        KeyCode::ControlLeft => {
-
+                        KeyCode::ShiftLeft | KeyCode::ShiftRight => {
+                            self.world.player_mut().sprint = false;
                         }
 
                         _ => {},

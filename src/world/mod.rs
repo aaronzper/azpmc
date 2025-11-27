@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, mem::take, time::{Duration, Instant}};
 use cgmath::{MetricSpace, Point2, Point3};
-use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, vectors::GRAVITY_A, world::{block::BlockType, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation}};
+use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, world::{block::BlockType, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation, player::Player}};
 
 /// World chunks, which contain block data
 pub mod chunk;
@@ -8,6 +8,8 @@ pub mod chunk;
 pub mod block;
 /// World generation
 mod generation;
+/// The player
+mod player;
 
 /// A lateral coordinate (X or Z)
 pub type Coordinate = i32;
@@ -24,7 +26,7 @@ pub struct GameWorld {
     /// chunk themselves
     block_scratch: HashMap<ThreeDimPos, BlockType>,
     /// The player
-    player: Entity,
+    player: Player,
     /// The last time a physics tick was calculated. Used for enforcing the tick
     /// rate
     last_tick: Instant,
@@ -32,14 +34,11 @@ pub struct GameWorld {
 
 impl GameWorld {
     pub fn new() -> Self {
-        let player_y = (sample_elevation(0, 0) + 2) as f32;
-        let mut player = Entity::new(Point3::new(0.0, player_y, 0.0), PLAYER_AABB);
-        player.set_acceleration(GRAVITY_A);
 
         Self {
             chunks: HashMap::new(),
             block_scratch: HashMap::new(),
-            player,
+            player: Player::new(),
             last_tick: Instant::now(),
         }
     }
@@ -147,7 +146,7 @@ impl GameWorld {
         }
     }
 
-    pub fn player_mut(&mut self) -> &mut Entity {
+    pub fn player_mut(&mut self) -> &mut Player {
         &mut self.player
     }
 

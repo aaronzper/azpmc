@@ -4,4 +4,5 @@ mod entity;
 mod aabb;
 
 pub use entity::Entity;
+pub use entity::RawEntity;
 pub use aabb::AABB;

@@ -1,5 +1,4 @@
-use cgmath::Point3;
-
+use cgmath::{Point3, Vector3};
 use crate::physics::AABB;
 
 /// The color of the skybox
@@ -25,7 +24,11 @@ pub const SEED: u32 = 613;
 
 /// Ticks per second
 pub const PHYSICS_TICK_RATE: f32 = 60.0;
-pub const MOVE_SPEED: f32 = 4.0;
+pub const MOVE_SPEED: f32 = 7.0;
+pub const JUMP_SPEED: f32 = 9.0;
+pub const GRAVITY_A: Vector3<f32> = Vector3::new(0.0, -30.0, 0.0);
+pub const SPRINT_MULTIPLIER: f32 = 2.0;
+
 pub const PLAYER_AABB: AABB = AABB::new(
     0.6,
     1.8,

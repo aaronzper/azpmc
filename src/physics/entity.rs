@@ -3,8 +3,8 @@ use wgpu::wgc::MAX_VERTEX_BUFFERS;
 use crate::{physics::{AABB, entity}, settings::PHYSICS_TICK_RATE, vectors::Dimension, world::{Coordinate, GameWorld, ThreeDimPos, block::BlockType}};
 
 #[derive(Debug)]
-/// A dynamic, physics-affected thing in-game (players, mobs, whatever)
-pub struct Entity {
+/// A raw `Entity` that only has a position, velocity, accel, and AABB
+pub struct RawEntity {
     /// Measured in meters
     position: Point3<f32>,
     /// Measured in m/s
@@ -15,7 +15,29 @@ pub struct Entity {
     bounding_box: AABB,
 }   
 
-impl Entity {
+/// A dynamic, physics-affected thing in-game (players, mobs, whatever)
+pub trait Entity {
+    /// Computes one physics tick of the entity
+    fn tick(&mut self, world: &GameWorld);
+    /// Gets the precise, float value of the entity's position (as opposed to
+    /// the integer coordinates).
+    fn get_precise_pos(&self) -> Point3<f32>;
+    fn set_pos(&mut self, p: Point3<f32>);
+    fn set_acceleration(&mut self, a: Vector3<f32>);
+    fn get_velocity(&self) -> Vector3<f32>;
+    fn set_velocity(&mut self, v: Vector3<f32>);
+
+    /// Gets the integer world position of the entity
+    fn get_world_pos(&self) -> ThreeDimPos {
+        (
+            self.get_precise_pos().x.floor() as Coordinate,
+            self.get_precise_pos().y.floor() as u8,
+            self.get_precise_pos().z.floor() as Coordinate,
+        )
+    }
+}
+
+impl RawEntity {
     pub fn new(position: Point3<f32>, bounding_box: AABB) -> Self {
         Self {
             position,
@@ -24,8 +46,10 @@ impl Entity {
             bounding_box,
         }
     }
+}
 
-    pub fn tick(&mut self, world: &GameWorld) {
+impl Entity for RawEntity {
+    fn tick(&mut self, world: &GameWorld) {
         self.velocity += self.acceleration / PHYSICS_TICK_RATE;
 
         let tick_v = self.velocity / PHYSICS_TICK_RATE;
@@ -53,8 +77,6 @@ impl Entity {
                 Dimension::Z => (bounds.0.z, bounds.1.z),
             };
 
-            log::info!("Checking axis {:?} on bounds {:?}", axis, bounds);
-
             let start_x = bounds.0.x.floor().to_i32().unwrap();
             let end_x = bounds.1.x.ceil().to_i32().unwrap();
             let start_y = bounds.0.y.floor().to_i32().unwrap();
@@ -76,7 +98,7 @@ impl Entity {
                             };
 
                             let overlap = if pos_movement {
-                                (entity_axis_max - block_axis)
+                                entity_axis_max - block_axis
                             } else {
                                 (block_axis + 1.0) - entity_axis_min
                             };
@@ -108,43 +130,25 @@ impl Entity {
         check_axis_collisions(Dimension::X);
         check_axis_collisions(Dimension::Y);
         check_axis_collisions(Dimension::Z);
-        log::info!("Pos: {:#?}", self.position);
     }
 
-    /// Gets the precise, float value of the entity's position (as opposed to
-    /// the integer coordinates).
-    pub fn get_precise_pos(&self) -> Point3<f32> {
+    fn get_precise_pos(&self) -> Point3<f32> {
         self.position
     }
 
-    pub fn set_pos(&mut self, p: Point3<f32>) {
+    fn set_pos(&mut self, p: Point3<f32>) {
         self.position = p;
     }
 
-    /// Gets the integer world position of the entity
-    pub fn get_world_pos(&self) -> ThreeDimPos {
-        (
-            self.get_precise_pos().x.floor() as Coordinate,
-            self.get_precise_pos().y.floor() as u8,
-            self.get_precise_pos().z.floor() as Coordinate,
-        )
-    }
-
-    pub fn set_acceleration(&mut self, a: Vector3<f32>) {
+    fn set_acceleration(&mut self, a: Vector3<f32>) {
         self.acceleration = a;
     }
 
-    pub fn get_velocity(&self) -> Vector3<f32> {
+    fn get_velocity(&self) -> Vector3<f32> {
         self.velocity
     }
 
-    pub fn set_velocity(&mut self, v: Vector3<f32>) {
+    fn set_velocity(&mut self, v: Vector3<f32>) {
         self.velocity = v;
-    }
-}
-
-impl Default for Entity {
-    fn default() -> Self {
-        Self::new(Point3::new(0.0, 0.0, 0.0), AABB::default())
     }
 }

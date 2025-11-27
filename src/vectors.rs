@@ -1,6 +1,4 @@
-use cgmath::{Point3, Vector2, Vector3};
-
-pub const GRAVITY_A: Vector3<f32> = Vector3::new(0.0, -9.8, 0.0);
+use cgmath::{Vector2, Vector3};
 
 #[derive(Debug)]
 pub enum Dimension { X, Y, Z }

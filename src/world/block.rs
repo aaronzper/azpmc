@@ -1,3 +1,7 @@
+use std::ops::{Deref, DerefMut};
+
+use crate::world::chunk::Chunk;
+
 /// The various block types
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BlockType {
@@ -51,5 +55,48 @@ impl BlockType {
             Self::Air | Self::Water => false,
             _ => true,
         }
+    }
+}
+
+/// A "smart pointer" to a block, such that when it goes out of scope, the 
+/// chunk mesh is updated.
+pub struct BlockRef<'a> {
+    block: (usize, usize, usize),
+    chunk: &'a mut Chunk,
+    original_type: BlockType,
+}
+
+impl<'a> BlockRef<'a> {
+    pub fn new(block: (usize, usize, usize), chunk: &'a mut Chunk) -> Self {
+        let mut out = Self {
+            block,
+            chunk,
+            original_type: BlockType::Air,
+        };
+
+        out.original_type = *out;
+        out
+    }
+}
+
+impl Drop for BlockRef<'_> {
+    fn drop(&mut self) {
+        if self.original_type != **self {
+            self.chunk.update_mesh();
+        }
+    }
+}
+
+impl Deref for BlockRef<'_> {
+    type Target = BlockType;
+
+    fn deref(&self) -> &Self::Target {
+        &self.chunk.blocks[self.block.0][self.block.2][self.block.1]
+    }
+}
+
+impl DerefMut for BlockRef<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.chunk.blocks[self.block.0][self.block.2][self.block.1]
     }
 }

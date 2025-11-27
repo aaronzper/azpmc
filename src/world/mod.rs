@@ -1,6 +1,6 @@
 use std::{cmp::min, collections::{HashMap, HashSet}, mem::take, time::{Duration, Instant}};
 use cgmath::{InnerSpace, MetricSpace, Point2, Point3, Vector3, Zero, num_traits::{Signed, abs, real::Real}};
-use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, MAX_HIGHLIGHT_DIST, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, vectors::point_to_pos, world::{block::{BlockSide, BlockType}, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation, player::Player}};
+use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, MAX_HIGHLIGHT_DIST, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, vectors::point_to_pos, world::{block::{BlockRef, BlockSide, BlockType}, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation, player::Player}};
 
 /// World chunks, which contain block data
 pub mod chunk;
@@ -148,6 +148,22 @@ impl GameWorld {
         }
     }
 
+    pub fn get_block_mut<'a>(&'a mut self, pos: ThreeDimPos) -> Option<BlockRef<'a>> {
+        let x = pos.0 as Coordinate;
+        let y = pos.1 as usize;
+        let z = pos.2 as Coordinate;
+
+        let chunk_pos = cords_to_chunk((x, z));
+        let (local_x, local_z) = cords_to_local((x, z));
+        match self.chunks.get_mut(&chunk_pos) {
+            Some(chunk) => Some(BlockRef::new(
+                (local_x, y, local_z),
+                chunk
+            )),
+            None => None,
+        }
+    }
+
     pub fn player_mut(&mut self) -> &mut Player {
         &mut self.player
     }
@@ -227,5 +243,14 @@ impl GameWorld {
 
     pub fn get_highlight(&self) -> Option<ThreeDimPos> {
         self.highlight
+    }
+
+    pub fn destroy_block(&mut self) {
+        if let Some(pos) = self.get_highlight() {
+            let mut block = self.get_block_mut(pos).unwrap();
+            *block = BlockType::Air;
+            drop(block);
+            self.cast_highlight();
+        }
     }
 }

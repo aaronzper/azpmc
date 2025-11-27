@@ -188,6 +188,8 @@ impl ApplicationHandler<()> for App {
                         result_state.window.set_cursor_visible(false);
                         self.mouse_trapped = true;
                     }
+
+                    self.world.destroy_block();
                 }
             }
 

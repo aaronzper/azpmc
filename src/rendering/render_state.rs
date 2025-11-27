@@ -1,10 +1,11 @@
 use std::sync::Arc;
 use anyhow::Context;
+use cgmath::{Vector3, Zero};
 use log::{info};
-use wgpu::{Buffer, Device, Queue, RenderPassDescriptor, RenderPipeline, Sampler, Surface, SurfaceConfiguration, Texture, TextureView, util::DeviceExt};
+use wgpu::{Buffer, Device, Queue, RenderPassDescriptor, RenderPipeline, Sampler, Surface, SurfaceConfiguration, Texture, TextureView, util::DeviceExt, BindGroup};
 use winit::window::Window;
 
-use crate::{rendering::{camera::{Camera, CameraUniform}, light::Sun, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bind_group}, vertex::Vertex}, settings};
+use crate::{rendering::{camera::{Camera, CameraUniform}, light::Sun, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bind_group}, vertex::Vertex}, settings, world::ThreeDimPos};
 
 /// Stores state of the window and rendering
 pub struct RenderState {
@@ -22,10 +23,11 @@ pub struct RenderState {
     surface_configured: bool,
 
     render_pipeline: RenderPipeline,
-    diffuse_bind_group: wgpu::BindGroup,
-    camera_bind_group: wgpu::BindGroup,
-    sun_bind_group: wgpu::BindGroup,
-    shadow_bind_group: wgpu::BindGroup,
+    diffuse_bind_group: BindGroup,
+    camera_bind_group: BindGroup,
+    sun_bind_group: BindGroup,
+    shadow_bind_group: BindGroup,
+    highlight_bind_group: BindGroup,
 
     pub camera: Camera,
     pub camera_uniform: CameraUniform,
@@ -40,6 +42,8 @@ pub struct RenderState {
     shadow_view: TextureView,
     shadow_sampler: Sampler,
     shadow_pipeline: RenderPipeline,
+
+    highlight_buffer: Buffer,
 }
 
 impl RenderState {
@@ -62,6 +66,9 @@ impl RenderState {
 
         info!("Using GPU \"{}\"", adapter.get_info().name);
 
+        let mut limits = wgpu::Limits::default();
+        limits.max_bind_groups = 5;
+
         let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor {
             label: None,
             // Extra features we want
@@ -69,7 +76,7 @@ impl RenderState {
             // Non-stable extra features we want
             experimental_features: wgpu::ExperimentalFeatures::disabled(),
             // Limits certain types of resources for us to create
-            required_limits: wgpu::Limits::default(),
+            required_limits: limits,
             // Preferred memory allocation strategy
             memory_hints: Default::default(),
             trace: wgpu::Trace::Off,
@@ -247,6 +254,40 @@ impl RenderState {
             ],
         });
 
+        // --- HIGHLIGHTED BLOCK ---
+        let highlight_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Highlighted Block"),
+                contents: bytemuck::cast_slice(&[[-1, -1, -1]]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            }
+        );
+
+        let highlight_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: None,
+            });
+
+        let highlight_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &highlight_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: highlight_buffer.as_entire_binding(),
+            }],
+            label: None,
+        });
+
+
         // --- MAIN PIPELINE ---
         let shader =
             device.create_shader_module(wgpu::include_wgsl!("../shaders/main.wgsl"));
@@ -259,6 +300,7 @@ impl RenderState {
                     &camera_bind_group_layout,
                     &sun_bind_group_layout,
                     &shadow_bind_group_layout,
+                    &highlight_bind_group_layout,
                 ],
                 push_constant_ranges: &[],
             }
@@ -378,6 +420,7 @@ impl RenderState {
             camera_bind_group,
             sun_bind_group,
             shadow_bind_group,
+            highlight_bind_group,
 
             camera,
             camera_uniform,
@@ -390,10 +433,12 @@ impl RenderState {
             shadow_view,
             shadow_sampler,
             shadow_pipeline,
+
+            highlight_buffer,
         })
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, highlight: Option<ThreeDimPos>) {
         self.depth_texture = DepthTexture::new(&self.device, &self.config, "depth_texture");
 
         self.camera_uniform.update_view_proj(&self.camera);
@@ -402,6 +447,15 @@ impl RenderState {
         let center = self.camera.get_position().into();
         self.sun.update_view_proj(center, settings::SHADOW_RENDER_SZ);
         self.queue.write_buffer(&self.sun_buffer, 0, bytemuck::cast_slice(&[self.sun]));
+
+        let highlight_data = match highlight {
+            Some((h_x, h_y, h_z)) => [h_x, h_y as i32, h_z],
+            None => [-1, -1, -1],
+        };
+        self.queue.write_buffer(
+            &self.highlight_buffer, 0,
+            bytemuck::cast_slice(&[highlight_data])
+        );
     }
 
     pub fn resize(&mut self, w: u32, h: u32) {
@@ -500,6 +554,7 @@ impl RenderState {
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
         render_pass.set_bind_group(2, &self.sun_bind_group, &[]);
         render_pass.set_bind_group(3, &self.shadow_bind_group, &[]);
+        render_pass.set_bind_group(4, &self.highlight_bind_group, &[]);
         for mesh in meshes {
             if !mesh.are_buffers_set() {
                 mesh.set_buffers(&self.device);

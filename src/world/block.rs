@@ -45,13 +45,11 @@ impl BlockType {
         }
     }
 
-    /// Returns true if faces should be rendered adjacent to this block (water, air).
-    ///
-    /// Returns false otherwise.
-    pub fn is_renderable_adjacent(&self) -> bool {
+    /// Returns false for air and water, true otherwise.
+    pub fn is_solid(&self) -> bool {
         match *self {
-            Self::Air | Self::Water => true,
-            _ => false,
+            Self::Air | Self::Water => false,
+            _ => true,
         }
     }
 }

@@ -15,10 +15,11 @@ pub const SHADOW_RENDER_SZ: f32 = 300.0;
 pub const CAMERA_SPEED: f32 = 0.50;
 pub const MOUSE_SENSITIVITY: f32 = 0.007;
 pub const FOV: f32 = 70.0;
+pub const MAX_HIGHLIGHT_DIST: usize = 8;
 
 pub const CHUNK_SIZE: usize = 16;
 /// The number of chunks to render away from the player
-pub const RENDER_DIST: usize = 16;
+pub const RENDER_DIST: usize = 8;
 
 pub const SEED: u32 = 613;
 

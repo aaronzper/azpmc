@@ -1,6 +1,6 @@
-use std::{collections::{HashMap, HashSet}, mem::take, time::{Duration, Instant}};
-use cgmath::{MetricSpace, Point2, Point3};
-use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, world::{block::BlockType, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation, player::Player}};
+use std::{cmp::min, collections::{HashMap, HashSet}, mem::take, time::{Duration, Instant}};
+use cgmath::{InnerSpace, MetricSpace, Point2, Point3, Vector3, Zero, num_traits::{Signed, abs, real::Real}};
+use crate::{physics::Entity, rendering::mesh::Mesh, settings::{CHUNK_SIZE, MAX_HIGHLIGHT_DIST, PHYSICS_TICK_RATE, PLAYER_AABB, RENDER_DIST}, vectors::point_to_pos, world::{block::{BlockSide, BlockType}, chunk::{Chunk, cords_to_chunk, cords_to_local}, generation::sample_elevation, player::Player}};
 
 /// World chunks, which contain block data
 pub mod chunk;
@@ -30,16 +30,18 @@ pub struct GameWorld {
     /// The last time a physics tick was calculated. Used for enforcing the tick
     /// rate
     last_tick: Instant,
+    /// The highlighted block, if there is one
+    highlight: Option<ThreeDimPos>,
 }
 
 impl GameWorld {
     pub fn new() -> Self {
-
         Self {
             chunks: HashMap::new(),
             block_scratch: HashMap::new(),
             player: Player::new(),
             last_tick: Instant::now(),
+            highlight: None,
         }
     }
 
@@ -160,8 +162,70 @@ impl GameWorld {
         }
         self.last_tick = Instant::now();
 
+        self.cast_highlight();
+
         let mut player = take(&mut self.player);
         player.tick(self);
         self.player = player;
+    }
+
+    /// Updates the currently highlighted block face per the provided ray,
+    /// starting from the player position
+    fn cast_highlight(&mut self) {
+        let ray = self.player.facing.normalize();
+
+        if ray.magnitude().is_zero() {
+            return;
+        }
+
+        let step_x = if ray.x.is_positive() { 1. } else { -1. };
+        let step_y = if ray.y.is_positive() { 1. } else { -1. };
+        let step_z = if ray.z.is_positive() { 1. } else { -1. };
+
+        let d_x = abs(1.0 / ray.x);
+        let d_y = abs(1.0 / ray.y);
+        let d_z = abs(1.0 / ray.z);
+
+        let mut pos = self.player.get_precise_pos();
+
+        let x_next = pos.x.floor() + if ray.x.is_positive() { 1. } else { 0. };
+        let y_next = pos.y.floor() + if ray.y.is_positive() { 1. } else { 0. };
+        let z_next = pos.z.floor() + if ray.z.is_positive() { 1. } else { 0. };
+
+        let mut t_max_x = (x_next - pos.x) / ray.x;
+        let mut t_max_y = (y_next - pos.y) / ray.y;
+        let mut t_max_z = (z_next - pos.z) / ray.z;
+
+        let mut dist = 0;
+        loop {
+            let block = point_to_pos(pos);
+            if let Some(b) = self.get_block(block) && b.is_solid() {
+                self.highlight = Some(block);
+                return;
+            }
+
+            if dist > MAX_HIGHLIGHT_DIST {
+                self.highlight = None;
+                return;
+            }
+
+            let min = t_max_x.min(t_max_y).min(t_max_z);
+            if min == t_max_x {
+                pos.x += step_x;
+                t_max_x += d_x;
+            } else if min == t_max_y {
+                pos.y += step_y;
+                t_max_y += d_y;
+            } else { // t_max_z
+                pos.z += step_z;
+                t_max_z += d_z;
+            }
+
+            dist += 1;
+        }
+    }
+
+    pub fn get_highlight(&self) -> Option<ThreeDimPos> {
+        self.highlight
     }
 }

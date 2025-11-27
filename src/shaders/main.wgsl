@@ -19,7 +19,7 @@ struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) texture_cords: vec2<f32>,
     @location(2) normal: vec3<f32>,
-    @location(3) is_highlighted: u32,
+    @location(3) block: vec3<i32>,
 };
 
 struct VertexOutput {
@@ -28,7 +28,7 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) world_position: vec3<f32>,
     @location(3) light_position: vec4<f32>,
-    @location(4) is_highlighted: u32,
+    @location(4) block: vec3<i32>,
 };
 
 @vertex
@@ -40,7 +40,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_normal = in.normal;
     out.world_position = in.position;
     out.light_position = sun.view_proj * vec4<f32>(in.position, 1.0);
-    out.is_highlighted = in.is_highlighted;
+    out.block = in.block;
 
     return out;
 }
@@ -54,6 +54,9 @@ var s_diffuse: sampler;
 var shadow_map: texture_depth_2d;
 @group(3) @binding(1)
 var shadow_sampler: sampler_comparison;
+
+@group(4) @binding(0)
+var<uniform> highlighted_block: vec3<i32>;
 
 const SHADOW_BIAS: f32 = 1.00;
 
@@ -102,7 +105,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let lighting = ambient_color + diffuse_color;
     var final_color = lighting * base_color.xyz;
 
-    if in.is_highlighted > 0u {
+    if all(highlighted_block == in.block) {
         let white = vec3<f32>(1.0, 1.0, 1.0);
         final_color = 0.85 * final_color + 0.15 * white;
     }

@@ -5,7 +5,7 @@ pub struct Vertex {
     pub position: [f32; 3],
     pub texture_cords: [f32; 2],
     pub normal: [f32; 3],
-    pub is_highlighted: u32,
+    pub block: [i32; 3],
 }
 
 pub const NORMAL_UP: [f32; 3] = [0.0, 1.0, 0.0];
@@ -41,8 +41,8 @@ impl Vertex {
                 wgpu::VertexAttribute {
                     offset: std::mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
                     shader_location: 3,
-                    format: wgpu::VertexFormat::Uint32,
-                }
+                    format: wgpu::VertexFormat::Sint32x3,
+                },
             ]
         }
     }

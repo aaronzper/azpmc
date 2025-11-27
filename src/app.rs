@@ -50,12 +50,13 @@ impl ApplicationHandler<()> for App {
                 if self.mouse_trapped {
                     let (dx, dy) = delta;
                     render_state.camera.update_direction(dx, dy);
+                    let direction = render_state.camera.get_direction();
 
                     let player = self.world.player_mut();
                     let player_v = player.get_velocity();
                     let old_player_dir = xyz_to_xz(player_v);
                     let new_player_dir = 
-                        xyz_to_xz(render_state.camera.get_direction()).normalize()
+                        xyz_to_xz(direction).normalize()
                         * old_player_dir.magnitude();
                     player.set_velocity(replace_xz(player_v, new_player_dir));
                 }
@@ -91,7 +92,7 @@ impl ApplicationHandler<()> for App {
                     .update_position(self.world.player_mut().get_precise_pos());
 
                 // Render!
-                render_state.update();
+                render_state.update(self.world.get_highlight());
                 let mut meshes = self.world.get_meshes_mut();
                 match render_state.render(&mut meshes[..]) {
                     Ok(_) => {}

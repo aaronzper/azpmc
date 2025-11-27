@@ -12,7 +12,7 @@ pub enum BlockType {
 }
 
 /// One side of a block
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BlockSide {
     Front, Back,
     Left, Right,

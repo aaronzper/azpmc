@@ -19,6 +19,7 @@ struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) texture_cords: vec2<f32>,
     @location(2) normal: vec3<f32>,
+    @location(3) is_highlighted: u32,
 };
 
 struct VertexOutput {
@@ -27,6 +28,7 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) world_position: vec3<f32>,
     @location(3) light_position: vec4<f32>,
+    @location(4) is_highlighted: u32,
 };
 
 @vertex
@@ -38,6 +40,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.world_normal = in.normal;
     out.world_position = in.position;
     out.light_position = sun.view_proj * vec4<f32>(in.position, 1.0);
+    out.is_highlighted = in.is_highlighted;
 
     return out;
 }
@@ -97,6 +100,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let diffuse_color = sun.color * diffuse_strength;
     
     let lighting = ambient_color + diffuse_color;
-    let final_color = lighting * base_color.xyz;
+    var final_color = lighting * base_color.xyz;
+
+    if in.is_highlighted > 0u {
+        let white = vec3<f32>(1.0, 1.0, 1.0);
+        final_color = 0.85 * final_color + 0.15 * white;
+    }
+
     return vec4<f32>(final_color, base_color.a);
 }

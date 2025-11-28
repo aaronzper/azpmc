@@ -73,8 +73,6 @@ impl RenderState {
             label: None,
             // Extra features we want
             required_features: wgpu::Features::empty(),
-            // Non-stable extra features we want
-            experimental_features: wgpu::ExperimentalFeatures::disabled(),
             // Limits certain types of resources for us to create
             required_limits: limits,
             // Preferred memory allocation strategy
@@ -527,8 +525,6 @@ impl RenderState {
                 view: &view,
                 // Texture to receive resolved output if multisampling
                 resolve_target: None,
-                // See docs
-                depth_slice: None,
                 // What to do with the colors
                 ops: wgpu::Operations {
                     // What to do with previous frame's colors (clear & replace)

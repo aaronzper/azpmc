@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use anyhow::Context;
-use cgmath::{Vector3, Zero};
+use cgmath::{Point3, Vector3, Zero};
 use log::{info};
 use wgpu::{Buffer, Device, Queue, RenderPassDescriptor, RenderPipeline, Sampler, Surface, SurfaceConfiguration, Texture, TextureView, util::DeviceExt, BindGroup};
 use winit::window::Window;
@@ -146,7 +146,7 @@ impl RenderState {
         });
 
         // --- SUNLIGHT ---
-        let mut sun = Sun::new([1.0, -2.0, 0.5], [1.0, 1.0, 1.0]);
+        let sun = Sun::new([1.0, -2.0, 0.5], [1.0, 1.0, 1.0]);
         let sun_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("The Sun"),
@@ -442,7 +442,7 @@ impl RenderState {
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
 
-        let center = self.camera.get_position().into();
+        let center = self.camera.get_position();
         self.sun.update_view_proj(center, settings::SHADOW_RENDER_SZ);
         self.queue.write_buffer(&self.sun_buffer, 0, bytemuck::cast_slice(&[self.sun]));
 
@@ -465,7 +465,11 @@ impl RenderState {
         }
     }
 
-    pub fn render(&mut self, meshes: &mut [&mut Mesh], ui: &mut UI) ->
+    pub fn render(&mut self, 
+        meshes: &mut [&mut Mesh],
+        ui: &mut UI,
+        center: Point3<f32>,
+    ) ->
         Result<(), wgpu::SurfaceError> {
 
         self.window.request_redraw();
@@ -559,6 +563,11 @@ impl RenderState {
             }
             mesh.draw(&mut render_pass);
         }
+
+        let mut sun_mesh = self.sun.sun_mesh(center);
+        sun_mesh.set_buffers(&self.device);
+        sun_mesh.draw(&mut render_pass);
+
         drop(render_pass); // Release borrow on the encoder
 
         ui.draw(

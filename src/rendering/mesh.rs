@@ -2,6 +2,7 @@ use wgpu::{Buffer, Device, RenderPass, util::DeviceExt};
 
 use crate::rendering::vertex::Vertex;
 
+#[derive(Debug)]
 /// A 3D mesh that can be rendered.
 pub struct Mesh {
     pub verticies: Vec<Vertex>,

@@ -90,6 +90,12 @@ fn compute_shadow(light_pos: vec4<f32>) -> f32 {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let base_color = textureSample(t_diffuse, s_diffuse, in.texture_cords);
 
+    if in.block.y < 0 {
+        // Invalid block coord, thus this isnt a block and doesn't need to
+        // be lit normally.
+        return base_color;
+    }
+
     let lp = in.light_position / in.light_position.w;
 
     let shadow = compute_shadow(in.light_position);    

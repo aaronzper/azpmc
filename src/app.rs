@@ -99,9 +99,11 @@ impl ApplicationHandler<()> for App {
 
                 // Render!
                 render_state.update(self.world.get_highlight());
+                let center = self.world.player().get_precise_pos();
                 let mut meshes = self.world.get_meshes_mut();
                 let ui = self.ui.as_mut().unwrap();
-                match render_state.render(&mut meshes[..], ui) {
+
+                match render_state.render(&mut meshes[..], ui, center) {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {

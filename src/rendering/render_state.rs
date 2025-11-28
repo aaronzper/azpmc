@@ -5,7 +5,7 @@ use log::{info};
 use wgpu::{Buffer, Device, Queue, RenderPassDescriptor, RenderPipeline, Sampler, Surface, SurfaceConfiguration, Texture, TextureView, util::DeviceExt, BindGroup};
 use winit::window::Window;
 
-use crate::{rendering::{camera::{Camera, CameraUniform}, light::Sun, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bind_group}, vertex::Vertex}, settings, world::ThreeDimPos};
+use crate::{rendering::{camera::{Camera, CameraUniform}, light::Sun, mesh::Mesh, textures::{DEPTH_FORMAT, DepthTexture, create_diffue_bind_group}, vertex::Vertex}, settings, ui::UI, world::ThreeDimPos};
 
 /// Stores state of the window and rendering
 pub struct RenderState {
@@ -465,7 +465,9 @@ impl RenderState {
         }
     }
 
-    pub fn render(&mut self, meshes: &mut [&mut Mesh]) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, meshes: &mut [&mut Mesh], ui: &mut UI) ->
+        Result<(), wgpu::SurfaceError> {
+
         self.window.request_redraw();
 
         if !self.surface_configured {
@@ -558,6 +560,15 @@ impl RenderState {
             mesh.draw(&mut render_pass);
         }
         drop(render_pass); // Release borrow on the encoder
+
+        ui.draw(
+            &self.window,
+            &mut render_encoder,
+            &view,
+            &self.device,
+            &self.queue,
+            &self.config,
+        );
 
         self.queue.submit(std::iter::once(render_encoder.finish()));
         output.present();

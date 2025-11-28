@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use cgmath::{InnerSpace, Vector2, Vector3, Zero};
-use winit::{application::ApplicationHandler, event::{DeviceEvent, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
-use crate::{physics::Entity, rendering::RenderState, settings::MOVE_SPEED, vectors::{replace_xz, xyz_to_xz}, world::{Coordinate, GameWorld}};
+use winit::{application::ApplicationHandler, event::{DeviceEvent, Event, KeyEvent, MouseButton, WindowEvent}, event_loop::ActiveEventLoop, keyboard::{KeyCode, PhysicalKey}, window::{Window, WindowId}};
+use crate::{physics::Entity, rendering::RenderState, settings::MOVE_SPEED, ui::UI, vectors::{replace_xz, xyz_to_xz}, world::{Coordinate, GameWorld}};
 
 /// Stores top-level info on the entire app
 pub struct App {
@@ -9,6 +9,7 @@ pub struct App {
     mouse_trapped: bool,
 
     world: GameWorld,
+    ui: Option<UI>,
 }
 
 impl App {
@@ -17,6 +18,7 @@ impl App {
             render_state: None,
             mouse_trapped: false,
             world: GameWorld::new(),
+            ui: None,
         }
     }
 }
@@ -28,6 +30,7 @@ impl ApplicationHandler<()> for App {
             .with_inner_size(winit::dpi::LogicalSize::new(1800, 1200));
 
         let win = Arc::new(event_loop.create_window(win_atts).unwrap());
+        self.ui = Some(UI::new(&win));
 
         self.render_state = Some(
             pollster::block_on(RenderState::new(win)).unwrap()
@@ -68,7 +71,7 @@ impl ApplicationHandler<()> for App {
 
     fn window_event(&mut self,
         event_loop: &ActiveEventLoop,
-        _win_id: WindowId,
+        window_id: WindowId,
         event: WindowEvent,
     ) {
         let render_state = match &mut self.render_state {
@@ -94,7 +97,8 @@ impl ApplicationHandler<()> for App {
                 // Render!
                 render_state.update(self.world.get_highlight());
                 let mut meshes = self.world.get_meshes_mut();
-                match render_state.render(&mut meshes[..]) {
+                let ui = self.ui.as_mut().unwrap();
+                match render_state.render(&mut meshes[..], ui) {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
@@ -189,17 +193,22 @@ impl ApplicationHandler<()> for App {
                         self.world.destroy_block();
                     }
 
-                    if let Some(result_state) = &self.render_state {
-                        result_state.window
-                            .set_cursor_grab(winit::window::CursorGrabMode::Locked)
-                            .unwrap();
-                        result_state.window.set_cursor_visible(false);
-                        self.mouse_trapped = true;
-                    }
+                    render_state.window
+                        .set_cursor_grab(winit::window::CursorGrabMode::Locked)
+                        .unwrap();
+                    render_state.window.set_cursor_visible(false);
+                    self.mouse_trapped = true;
                 }
             }
 
             _ => {},
+        }
+
+        if let Some(ui) = &mut self.ui {
+            ui.handle_event(
+                &render_state.window,
+                &Event::WindowEvent { window_id, event }
+            );
         }
     }
 }

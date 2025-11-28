@@ -11,6 +11,8 @@ mod world;
 mod app;
 /// Physics stuff
 mod physics;
+/// 2D UI on top of the 3D rendered scene
+mod ui;
 /// Vector math helpers
 mod vectors;
 

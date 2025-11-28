@@ -89,7 +89,7 @@ impl Entity for RawEntity {
                 for x in start_x..end_x {
                     for z in start_z..end_z {
                         if let Some(b) = world.get_block((x, y as u8, z)) &&
-                            b != BlockType::Air {
+                            b.is_solid() {
 
                             let block_axis = match axis {
                                 Dimension::X => x as f32,

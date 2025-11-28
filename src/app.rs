@@ -124,7 +124,9 @@ impl ApplicationHandler<()> for App {
 
                         KeyCode::Escape => {
                             render_state.window.set_cursor_visible(true);
-                            render_state.window.set_cursor_grab(winit::window::CursorGrabMode::None).unwrap();
+                            render_state.window
+                                .set_cursor_grab(winit::window::CursorGrabMode::None)
+                                .unwrap();
                             self.mouse_trapped = false;
                         }
 
@@ -183,13 +185,17 @@ impl ApplicationHandler<()> for App {
 
             WindowEvent::MouseInput { state, button, .. } => {
                 if state.is_pressed() && button == MouseButton::Left {
+                    if self.mouse_trapped {
+                        self.world.destroy_block();
+                    }
+
                     if let Some(result_state) = &self.render_state {
-                        result_state.window.set_cursor_grab(winit::window::CursorGrabMode::Locked).unwrap();
+                        result_state.window
+                            .set_cursor_grab(winit::window::CursorGrabMode::Locked)
+                            .unwrap();
                         result_state.window.set_cursor_visible(false);
                         self.mouse_trapped = true;
                     }
-
-                    self.world.destroy_block();
                 }
             }
 

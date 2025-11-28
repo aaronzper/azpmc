@@ -43,9 +43,7 @@ impl UI {
             renderer: None,
             last_frame: Instant::now(),
             last_cursor: None,
-            state: UIState { 
-                position: (0, 0, 0)
-            }
+            state: UIState::default(),
         }
     }
 

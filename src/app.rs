@@ -94,6 +94,9 @@ impl ApplicationHandler<()> for App {
                 render_state.camera
                     .update_position(self.world.player_mut().get_precise_pos());
 
+                // Update UI overlay
+                self.ui.as_mut().unwrap().state.update(&self.world);
+
                 // Render!
                 render_state.update(self.world.get_highlight());
                 let mut meshes = self.world.get_meshes_mut();

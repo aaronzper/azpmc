@@ -164,6 +164,10 @@ impl GameWorld {
         }
     }
 
+    pub fn player(&self) -> &Player {
+        &self.player
+    }
+
     pub fn player_mut(&mut self) -> &mut Player {
         &mut self.player
     }
@@ -251,6 +255,13 @@ impl GameWorld {
             *block = BlockType::Air;
             drop(block);
             self.cast_highlight();
+        }
+    }
+
+    pub fn facing(&self) -> Option<BlockType> {
+        match self.highlight {
+            Some(p) => self.get_block(p),
+            None => None,
         }
     }
 }

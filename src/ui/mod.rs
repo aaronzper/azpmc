@@ -4,8 +4,7 @@ use imgui_wgpu::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use wgpu::{CommandEncoder, TextureView};
 use winit::{event::Event, window::Window};
-
-use crate::ui::state::UIState;
+use crate::{settings, ui::state::UIState};
 
 mod state;
 
@@ -26,13 +25,17 @@ impl UI {
         let mut context = imgui::Context::create();
         let mut platform = WinitPlatform::new(&mut context);
         platform.attach_window(context.io_mut(), win, HiDpiMode::Default);
+
+        let dpi_factor = win.scale_factor();
+        let font_sz = (settings::FONT_SZ * dpi_factor) as f32;
+        context.io_mut().font_global_scale = (1.0 / dpi_factor) as f32;
         
         context.set_ini_filename(None);
         context.fonts().add_font(&[FontSource::DefaultFontData {
             config: Some(imgui::FontConfig {
                 oversample_h: 1,
                 pixel_snap_h: true,
-                size_pixels: 18.,
+                size_pixels: font_sz,
                 ..Default::default()
             }),
         }]);

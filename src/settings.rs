@@ -36,3 +36,5 @@ pub const PLAYER_AABB: AABB = AABB::new(
     0.6,
     Point3::new(0.3, 1.6, 0.3),
 ).unwrap();
+
+pub const FONT_SZ: f64 = 18.0;
